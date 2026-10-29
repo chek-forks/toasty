@@ -95,7 +95,7 @@ pub async fn starts_with_no_match(test: &mut Test) -> Result<()> {
 }
 
 /// starts_with with an empty prefix — DynamoDB rejects empty string key values.
-#[driver_test(requires(not(sql)))]
+#[driver_test(requires(and(not(sql), dynamodb_key_semantics)))]
 pub async fn starts_with_empty_prefix(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 

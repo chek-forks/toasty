@@ -63,7 +63,7 @@ pub async fn newtype_column_name(test: &mut Test) {
 
 /// Tests create, read-back, eq filter, update, delete-by-filter, and batch
 /// create — all with the same `Email(String)` newtype model.
-#[driver_test(requires(sql))]
+#[driver_test(requires(and(unique_index, sql)))]
 pub async fn crud_newtype_embed(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Embed)]
     struct Email(String);
@@ -149,7 +149,7 @@ pub async fn crud_newtype_embed(t: &mut Test) -> Result<()> {
 
 /// Tests `#[unique]` on a newtype field generates `get_by_*` and enforces
 /// uniqueness.
-#[driver_test(requires(sql))]
+#[driver_test(requires(and(unique_index, sql)))]
 pub async fn newtype_unique_constraint(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Embed)]
     struct Email(String);

@@ -8,6 +8,7 @@ members = [
     "crates/toasty-sql",
 
     # Driver implementations
+    "crates/toasty-driver-cassandra",
     "crates/toasty-driver-dynamodb",
     "crates/toasty-driver-mysql",
     "crates/toasty-driver-postgresql",
@@ -19,6 +20,7 @@ members = [
     "crates/toasty-driver-integration-suite-macros",
 
     # Examples
+    "examples/cassandra-blog",
     "examples/cms-article-fields",
     "examples/crm-embedded",
     "examples/forum-relationships",
@@ -45,6 +47,7 @@ default-members = [
     "crates/toasty-sql",
     "crates/toasty-driver-integration-suite",
     "crates/toasty-driver-integration-suite-macros",
+    "examples/cassandra-blog",
     "examples/cms-article-fields",
     "examples/crm-embedded",
     "examples/forum-relationships",
@@ -80,6 +83,7 @@ toasty-core = { version = "0.11.0", path = "crates/toasty-core" }
 toasty-macros = { version = "0.11.0", path = "crates/toasty-macros" }
 toasty-sql = { version = "0.11.0", path = "crates/toasty-sql" }
 # Driver implementations
+toasty-driver-cassandra = { version = "0.11.0", path = "crates/toasty-driver-cassandra" }
 toasty-driver-dynamodb = { version = "0.11.0", path = "crates/toasty-driver-dynamodb" }
 toasty-driver-mysql = { version = "0.11.0", path = "crates/toasty-driver-mysql", default-features = false }
 toasty-driver-postgresql = { version = "0.11.0", path = "crates/toasty-driver-postgresql" }
@@ -140,6 +144,7 @@ bigdecimal = "0.4.10"
 rusqlite = { version = "0.40", features = ["bundled"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
+scylla = { version = "1.9.0", default-features = false }
 sqlx-core = { version = "=0.9.0", default-features = false, features = ["_rt-tokio"] }
 sqlx-mysql = { version = "=0.9.0", default-features = false, features = ["rsa", "time"] }
 syn = { version = "3.0.0", features = ["full", "extra-traits", "visit-mut"] }

@@ -98,6 +98,14 @@ pub struct Capability {
     /// Other uniqueness conflicts and validation errors must remain errors.
     pub upsert_targeted_ignore: bool,
 
+    /// Whether the database can enforce unique constraints on secondary
+    /// indexes.
+    ///
+    /// SQL backends create a `UNIQUE INDEX`; DynamoDB emulates one with an
+    /// auxiliary table. Cassandra has no equivalent: it accepts `#[unique]` as
+    /// schema metadata but creates no enforcing index.
+    pub unique_index: bool,
+
     /// DynamoDB does not support != predicates on the primary key.
     pub primary_key_ne_predicate: bool,
 
@@ -671,6 +679,7 @@ impl Capability {
         upsert_unique: true,
         upsert_branch_assignments: true,
         upsert_targeted_ignore: true,
+        unique_index: true,
         primary_key_ne_predicate: true,
         auto_increment: true,
         max_auto_increment_integer_width: Some(4),
@@ -939,6 +948,7 @@ impl Capability {
         upsert_unique: false,
         upsert_branch_assignments: false,
         upsert_targeted_ignore: true,
+        unique_index: true,
         primary_key_ne_predicate: false,
         auto_increment: false,
         max_auto_increment_integer_width: None,
@@ -1016,6 +1026,111 @@ impl Capability {
         // expressed because `UpdateExpression` indices must be literal
         // integers.
         vec_remove: false,
+        vec_pop: false,
+        vec_remove_at: false,
+    };
+
+    /// Apache Cassandra and ScyllaDB capabilities.
+    ///
+    /// Cassandra is a wide-column store that speaks CQL. It has no joins,
+    /// interactive transactions, `RETURNING`, unique constraints, or arbitrary
+    /// `WHERE` clauses, so this is a key-value driver (`sql: None`) modeled on
+    /// [`DYNAMODB`](Self::DYNAMODB).
+    pub const CASSANDRA: Self = Self {
+        driver_name: "Cassandra",
+        sql: None,
+        sql_placeholder: None,
+        storage_types: StorageTypes::CASSANDRA,
+        schema_mutations: SchemaMutations::CASSANDRA,
+        cte_with_update: false,
+        select_for_update: false,
+        returning_from_insert: false,
+        returning_from_update: false,
+
+        // CQL `INSERT` is an upsert on the primary key; `INSERT ... IF NOT
+        // EXISTS` gives insert-or-ignore semantics.
+        upsert_primary_key: true,
+        upsert_unique: false,
+        upsert_branch_assignments: false,
+        upsert_targeted_ignore: true,
+
+        // Cassandra cannot enforce unique secondary constraints. The schema
+        // keeps `#[unique]` as metadata, but no index is created.
+        unique_index: false,
+
+        // CQL does not allow `!=` on partition keys.
+        primary_key_ne_predicate: false,
+
+        // `boolean` is a legal CQL primary-key type.
+        bool_key_type: true,
+
+        auto_increment: false,
+        max_auto_increment_integer_width: None,
+        bigdecimal_implemented: false,
+
+        // Cassandra truncates/rejects identifiers longer than 48 characters.
+        max_identifier_length: Some(48),
+
+        // CQL `varchar` is an alias for `text` and takes no length.
+        native_varchar: false,
+        native_json: false,
+        native_jsonb: false,
+        native_enum: false,
+        named_enum_types: false,
+
+        // Temporals, decimals, and network addresses are stored as text.
+        native_timestamp: false,
+        native_date: false,
+        native_time: false,
+        native_datetime: false,
+        native_cidr: false,
+        native_inet: false,
+        native_macaddr: false,
+        native_macaddr8: false,
+        native_decimal: false,
+        decimal_arbitrary_precision: false,
+
+        // CQL has no `OR` in `WHERE`; the planner fans key predicates out.
+        index_or_predicate: false,
+
+        // CQL supports `LIKE` on text but has no prefix operator. The driver
+        // renders `StartsWith` as `LIKE 'prefix%'`.
+        native_starts_with: false,
+        glob_starts_with: false,
+        binary_like_starts_with: false,
+        native_like: true,
+        native_ilike: false,
+
+        // Unindexed queries use `SELECT ... ALLOW FILTERING`.
+        scan: true,
+        scan_supports_sort: false,
+
+        // The driver shares one scylla `Session` (which pools internally).
+        test_connection_pool: false,
+
+        // CQL has no row locks or transaction modes.
+        transaction_lock_mode: false,
+
+        // Server paging state cannot be reversed into a previous-page cursor.
+        backward_pagination: false,
+        sql_nulls_first_on_asc: false,
+
+        // Not a SQL backend; array binds and `ANY` predicates do not apply.
+        bind_list_param: false,
+        predicate_match_any: false,
+
+        // CQL collections (`list<T>`) are native.
+        native_array: true,
+        vec_scalar: true,
+        unique_list_index: false,
+        document_collections: true,
+
+        // Set predicates are expanded per element by the engine.
+        native_array_set_predicates: false,
+
+        // `col = col - [?]` removes matching list elements; CQL has no
+        // positional pop or remove-at.
+        vec_remove: true,
         vec_pop: false,
         vec_remove_at: false,
     };
@@ -1175,6 +1290,40 @@ impl StorageTypes {
         // DynamoDB supports full u64 range (numbers stored as strings)
         max_unsigned_integer: None,
     };
+
+    /// Cassandra storage types.
+    pub const CASSANDRA: StorageTypes = StorageTypes {
+        default_string_type: db::Type::Text,
+
+        // CQL `varchar` is an alias for `text` and takes no length.
+        varchar: None,
+
+        default_uuid_type: db::Type::Uuid,
+        default_bytes_type: db::Type::Blob,
+
+        // Decimal values are stored as text until the driver encodes CQL
+        // `decimal` directly.
+        default_decimal_type: db::Type::Text,
+        default_bigdecimal_type: db::Type::Text,
+
+        // CQL `timestamp` is a native millisecond-precision instant. Toasty's
+        // jiff temporals are nanosecond precision; the driver truncates on
+        // encode and reconstructs from milliseconds on decode.
+        default_timestamp_type: db::Type::Timestamp(3),
+        default_zoned_type: db::Type::Text,
+        default_date_type: db::Type::Text,
+        default_time_type: db::Type::Text,
+        default_datetime_type: db::Type::Text,
+
+        // Network address values are stored as canonical text.
+        default_cidr_type: db::Type::Text,
+        default_inet_type: db::Type::Text,
+        default_macaddr_type: db::Type::Text,
+        default_macaddr8_type: db::Type::Text,
+
+        // CQL integers are signed; `bigint` is the widest fixed type.
+        max_unsigned_integer: Some(i64::MAX as u64),
+    };
 }
 
 impl SchemaMutations {
@@ -1200,6 +1349,14 @@ impl SchemaMutations {
 
     /// DynamoDB schema mutation capabilities. Migrations are not currently supported.
     pub const DYNAMODB: Self = Self {
+        alter_column_type: false,
+        alter_column_properties_atomic: false,
+    };
+
+    /// Cassandra schema mutation capabilities. Cassandra can add and drop
+    /// columns, but cannot change a column's type and has no atomic
+    /// multi-property alter.
+    pub const CASSANDRA: Self = Self {
         alter_column_type: false,
         alter_column_properties_atomic: false,
     };
@@ -1231,6 +1388,11 @@ mod tests {
     fn test_validate_dynamodb_capability() {
         // DynamoDB has native_varchar=false and varchar=None, should pass
         assert!(Capability::DYNAMODB.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_cassandra_capability() {
+        assert!(Capability::CASSANDRA.validate().is_ok());
     }
 
     #[test]

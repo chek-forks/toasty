@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 /// An enum-level `#[unique(name)]` referencing a shared logical field produces
 /// one unique DB index on the single shared column.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn shared_field_unique_index_schema(test: &mut Test) {
     #[derive(Debug, toasty::Embed)]
     #[unique(name)]
@@ -46,7 +46,7 @@ pub async fn shared_field_unique_index_schema(test: &mut Test) {
 /// Uniqueness on a shared column is cross-variant: a `Human` and an `Animal`
 /// with the same name conflict, matching the shared column's un-gated query
 /// semantics. Distinct names on either variant are accepted.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn shared_field_unique_enforced_cross_variant(test: &mut Test) -> Result<()> {
     #[derive(Debug, PartialEq, toasty::Embed)]
     #[unique(name)]
@@ -463,7 +463,7 @@ pub async fn embedded_prefix_collision_is_not_duplicate(test: &mut Test) -> Resu
 /// the shared identifier keeps naming the field in `#[unique(...)]`, and the
 /// index lands on the renamed column. The override needs declaring on only one
 /// member of the group.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn shared_field_column_override(test: &mut Test) -> Result<()> {
     #[derive(Debug, PartialEq, toasty::Embed)]
     #[unique(name)]

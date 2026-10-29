@@ -341,7 +341,7 @@ pub async fn preload_eager_has_many_filter_still_loads_all(test: &mut Test) -> R
 }
 
 /// Filtering a required one-to-one relation is rejected.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn preload_required_has_one_filter_rejected(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {

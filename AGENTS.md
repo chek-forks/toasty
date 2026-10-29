@@ -28,6 +28,10 @@ cargo test --features dynamodb --no-default-features -- --test-threads=1
 # DynamoDB + SQLite
 cargo test --features dynamodb -- --test-threads=1
 
+# Cassandra / ScyllaDB (requires a running server; see compose.yaml)
+docker compose up -d scylla
+cargo test -p tests --no-default-features --features cassandra -- --test-threads 1
+
 # Check the WASM build (backend-agnostic crates only; no driver builds for wasm)
 cargo check --target wasm32-unknown-unknown -p toasty -p toasty-core -p toasty-sql
 
@@ -58,7 +62,7 @@ identical everywhere — e.g. `.starts_with()` (case-sensitive prefix match).
 
 ## Architecture
 
-Toasty is a Rust ORM supporting SQL (SQLite, PostgreSQL, MySQL) and NoSQL (DynamoDB) databases. It is a Cargo workspace.
+Toasty is a Rust ORM supporting SQL (SQLite, PostgreSQL, MySQL) and NoSQL (DynamoDB, Cassandra/ScyllaDB) databases. It is a Cargo workspace.
 
 ### Crate Overview
 
@@ -68,7 +72,7 @@ Toasty is a Rust ORM supporting SQL (SQLite, PostgreSQL, MySQL) and NoSQL (Dynam
 | `toasty-core` | Shared types: schema representations, statement AST, driver interface |
 | `toasty-macros` | Proc-macro entry points and code generation (`#[derive(Model)]`, `#[derive(Embed)]`) |
 | `toasty-sql` | SQL serialization (statement AST → SQL string), used by SQL drivers |
-| `toasty-driver-sqlite/postgresql/mysql/dynamodb` | Database driver implementations |
+| `toasty-driver-sqlite/postgresql/mysql/dynamodb/cassandra` | Database driver implementations |
 | `toasty-driver-integration-suite` | Shared integration test suite run against all drivers |
 | `toasty-driver-integration-suite-macros` | Proc-macros for the test suite (`#[driver_test]`, `generate_driver_tests!`) |
 | `tests` | Workspace-level integration tests (invokes the suite per driver) |

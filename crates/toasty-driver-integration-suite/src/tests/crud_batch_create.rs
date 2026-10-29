@@ -170,7 +170,7 @@ pub async fn batch_create_fails_if_any_record_missing_fields(test: &mut Test) ->
     Ok(())
 }
 
-#[driver_test(scenario(crate::scenarios::user_unique_email))]
+#[driver_test(scenario(crate::scenarios::user_unique_email), requires(unique_index))]
 pub async fn batch_create_model_with_unique_field_index_all_unique(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 
@@ -200,7 +200,7 @@ pub async fn batch_create_model_with_unique_field_index_all_unique(test: &mut Te
     Ok(())
 }
 
-#[driver_test(scenario(crate::scenarios::user_unique_email))]
+#[driver_test(scenario(crate::scenarios::user_unique_email), requires(unique_index))]
 #[should_panic]
 pub async fn batch_create_model_with_unique_field_index_all_dups(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;

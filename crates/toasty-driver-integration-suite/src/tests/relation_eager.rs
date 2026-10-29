@@ -3,7 +3,7 @@ use crate::prelude::*;
 use toasty::schema::Model;
 use toasty_core::stmt;
 
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn eager_has_many_and_has_one_load_without_include(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -692,7 +692,7 @@ pub async fn eager_relation_self_cycle_is_rejected(t: &mut Test) -> Result<()> {
     Ok(())
 }
 
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn eager_relation_long_cycle_is_rejected(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {

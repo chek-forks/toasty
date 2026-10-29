@@ -190,7 +190,7 @@ pub async fn user_batch_create_todos_with_optional_field(test: &mut Test) -> Res
     Ok(())
 }
 
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn user_batch_create_two_todos_simple(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {

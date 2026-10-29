@@ -30,9 +30,9 @@
 [discord-badge]: https://img.shields.io/discord/500028886025895936.svg?logo=discord&style=flat-square
 [discord-url]: https://discord.gg/tokio
 
-Toasty supports SQL databases (SQLite/Turso, PostgreSQL, MySQL) and DynamoDB.
-It does not hide database capabilities — it exposes features based on the
-target database.
+Toasty supports SQL databases (SQLite/Turso, PostgreSQL, MySQL) and NoSQL
+databases (DynamoDB, Cassandra/ScyllaDB). It does not hide database
+capabilities — it exposes features based on the target database.
 
 ## Using Toasty
 
@@ -100,17 +100,18 @@ for todo in &todos {
 ## SQL and NoSQL
 
 Toasty supports both SQL and NoSQL databases. Current drivers are SQLite,
-Turso, PostgreSQL, MySQL, and DynamoDB. However, it does not aim to abstract
-the database. Instead, Toasty leans into the target database's capabilities
-and aims to help the user avoid issuing inefficient queries for that database.
+Turso, PostgreSQL, MySQL, DynamoDB, and Cassandra/ScyllaDB. However, it does
+not aim to abstract the database. Instead, Toasty leans into the target
+database's capabilities and aims to help the user avoid issuing inefficient
+queries for that database.
 
 When targeting both SQL and NoSQL databases, Toasty generates query methods
 (e.g. `get_by_id` only for access patterns that are indexed). When targeting a
 SQL database, Toasty might allow arbitrary additional query constraints. When
 targeting a NoSQL database, Toasty will only allow constraints that the
-specific target database can execute. For example, with DynamoDB, query methods
-might be generated based on the table's primary key, and additional constraints
-may be set for the sort key.
+specific target database can execute. For example, with DynamoDB or Cassandra,
+query methods might be generated based on the table's primary key, and
+additional constraints may be set for the sort key.
 
 ## Application data model vs. database schema
 

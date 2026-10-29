@@ -12,6 +12,7 @@
 # TOASTY_TEST_POSTGRES_URL = "postgresql://toasty:toasty@localhost:5432/toasty"
 # TOASTY_TEST_POSTGRES_TLS_URL = "postgresql://toasty:toasty@localhost:5433/toasty"
 # TOASTY_TEST_DYNAMODB_URL = "dynamodb://localhost:8000"
+# TOASTY_TEST_CASSANDRA_URL = "cassandra://127.0.0.1:9042/toasty_test"
 #
 # # DynamoDB specific environment variables
 # AWS_REGION = "foo"
@@ -88,3 +89,53 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ScyllaDB speaks CQL, so the same driver and test suite cover Apache
+  # Cassandra too. The `--smp`/`--memory` flags keep the container small enough
+  # for a laptop, and the broadcast addresses make the node reachable through
+  # Docker's port mapping.
+  scylla:
+    image: scylladb/scylla:6.2
+    command:
+      - --smp
+      - "1"
+      - --memory
+      - 1G
+      - --overprovisioned
+      - "1"
+      - --broadcast-address
+      - 127.0.0.1
+      - --broadcast-rpc-address
+      - 127.0.0.1
+    ports:
+      - "9042:9042"
+    volumes:
+      - scylla-data:/var/lib/scylla
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'SELECT now() FROM system.local' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+
+volumes:
+  scylla-data:
+
+# --- Apache Cassandra alternative -------------------------------------------
+# To run the same tests against Cassandra, replace the `scylla` service above
+# with this one (on the same port) and point TOASTY_TEST_CASSANDRA_URL at it:
+#
+#  cassandra:
+#    image: cassandra:5.0
+#    environment:
+#      CASSANDRA_CLUSTER_NAME: toasty
+#      MAX_HEAP_SIZE: 512M
+#      HEAP_NEWSIZE: 100M
+#    ports:
+#      - "9042:9042"
+#    healthcheck:
+#      test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces' >/dev/null 2>&1"]
+#      interval: 10s
+#      timeout: 10s
+#      retries: 30
+#      start_period: 60s

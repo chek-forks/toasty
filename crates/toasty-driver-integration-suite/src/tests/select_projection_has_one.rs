@@ -10,7 +10,7 @@
 
 use crate::prelude::*;
 
-#[driver_test(requires(sql))]
+#[driver_test(requires(and(unique_index, sql)))]
 pub async fn select_has_one(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {

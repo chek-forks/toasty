@@ -56,3 +56,4 @@
 - [SQLite](./sqlite.md)
 - [Turso](./turso.md)
 - [DynamoDB](./dynamodb.md)
+- [Cassandra and ScyllaDB](./cassandra.md)

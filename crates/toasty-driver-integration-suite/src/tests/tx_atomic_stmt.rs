@@ -69,7 +69,7 @@ pub async fn single_op_skips_transaction(t: &mut Test) -> Result<()> {
 /// explicit transaction wrapping is exercised. With uuid::Uuid IDs the engine
 /// reorders execution (INSERT todo before INSERT user due to the Const
 /// optimization), which produces a different but equally valid log pattern.
-#[driver_test(requires(and(sql, auto_increment)))]
+#[driver_test(requires(and(unique_index, and(sql, auto_increment))))]
 pub async fn create_with_has_many_rolls_back_on_failure(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -144,7 +144,7 @@ pub async fn create_with_has_many_rolls_back_on_failure(t: &mut Test) -> Result<
 /// explicit transaction wrapping is exercised. With uuid::Uuid IDs the engine
 /// can combine both inserts into a single atomic SQL statement, which provides
 /// atomicity without an explicit transaction.
-#[driver_test(requires(and(sql, auto_increment)))]
+#[driver_test(requires(and(unique_index, and(sql, auto_increment))))]
 pub async fn create_with_has_one_rolls_back_on_failure(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -217,7 +217,7 @@ pub async fn create_with_has_one_rolls_back_on_failure(t: &mut Test) -> Result<(
 /// a dependency of the UPDATE's returning clause). So the collision is placed
 /// on the User's name field (not the Todo), ensuring the INSERT succeeds first
 /// and is then rolled back when the subsequent UPDATE fails.
-#[driver_test(requires(sql))]
+#[driver_test(requires(and(unique_index, sql)))]
 pub async fn update_with_new_association_rolls_back_on_failure(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {

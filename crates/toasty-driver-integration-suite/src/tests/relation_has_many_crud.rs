@@ -389,7 +389,10 @@ pub async fn has_many_apply_multiple_removes(test: &mut Test) -> Result<()> {
 /// foreign key. Unlike the required-FK case (which deletes the child),
 /// Remove here takes the disassociate-nullify branch: the old todo
 /// persists with its FK set to NULL.
-#[driver_test(scenario(crate::scenarios::has_many_nullable_fk))]
+#[driver_test(
+    scenario(crate::scenarios::has_many_nullable_fk),
+    requires(unique_index)
+)]
 pub async fn has_many_apply_insert_and_remove_nullable_fk(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 
@@ -427,7 +430,10 @@ pub async fn has_many_apply_insert_and_remove_nullable_fk(test: &mut Test) -> Re
 /// `flatten_relation_batch` dispatches the merged Insert after the batch's
 /// removes, so the delete lands before the insert and the swap succeeds
 /// regardless of the order the caller wrote the entries.
-#[driver_test(scenario(crate::scenarios::has_many_unique_title))]
+#[driver_test(
+    scenario(crate::scenarios::has_many_unique_title),
+    requires(unique_index)
+)]
 pub async fn has_many_apply_swap_unique_required_fk(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 
@@ -459,7 +465,10 @@ pub async fn has_many_apply_swap_unique_required_fk(test: &mut Test) -> Result<(
 /// single statement. That merged INSERT must still be dispatched after the
 /// `remove`, or the new "X" collides with the old one on the unique
 /// constraint — i.e. coalescing inserts must not pull them ahead of removes.
-#[driver_test(scenario(crate::scenarios::has_many_unique_title))]
+#[driver_test(
+    scenario(crate::scenarios::has_many_unique_title),
+    requires(unique_index)
+)]
 pub async fn has_many_apply_swap_unique_with_extra_insert(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 

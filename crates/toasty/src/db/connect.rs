@@ -34,6 +34,7 @@ impl Connect {
     /// | `mysql` | MySQL | `mysql` |
     /// | `mariadb` | MariaDB | `mariadb` |
     /// | `dynamodb` | DynamoDB | `dynamodb` |
+    /// | `cassandra` / `scylla` | Cassandra / ScyllaDB | `cassandra` |
     /// | `turso` | Turso | `turso` |
     ///
     /// # Errors
@@ -43,6 +44,7 @@ impl Connect {
     pub async fn new(url: &str) -> Result<Self> {
         #![cfg_attr(
             not(any(
+                feature = "cassandra",
                 feature = "dynamodb",
                 feature = "mysql",
                 feature = "mariadb",
@@ -57,6 +59,17 @@ impl Connect {
         let scheme = url.scheme().to_ascii_lowercase();
 
         let driver: Box<dyn Driver> = match scheme.as_str() {
+            #[cfg(feature = "cassandra")]
+            "cassandra" | "scylla" => {
+                Box::new(toasty_driver_cassandra::Cassandra::new(url.as_str())?)
+            }
+            #[cfg(not(feature = "cassandra"))]
+            "cassandra" | "scylla" => {
+                return Err(toasty_core::Error::unsupported_feature(
+                    "`cassandra` feature not enabled",
+                ));
+            }
+
             #[cfg(feature = "dynamodb")]
             "dynamodb" => {
                 // DynamoDB driver requires async initialization to load AWS config from environment

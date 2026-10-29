@@ -210,7 +210,7 @@ pub async fn arithmetic_chains_with_other_updates(t: &mut Test) -> Result<()> {
     Ok(())
 }
 
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn increment_unique_column(t: &mut Test) -> Result<()> {
     // Regression: DynamoDB's unique-index update path assumes every
     // assignment on a unique column is `Set` (`let Set(expr) = assignment

@@ -257,7 +257,10 @@ pub async fn query_update_multi_key_works(test: &mut Test) -> Result<()> {
 /// Query-based update through the unique-index path (path 3) increments the
 /// version. The version is a non-unique column, so it rides along in the main
 /// update expression alongside the unique-index surgery.
-#[driver_test(scenario(crate::scenarios::versioned_user_unique_email))]
+#[driver_test(
+    scenario(crate::scenarios::versioned_user_unique_email),
+    requires(unique_index)
+)]
 pub async fn query_update_unique_index_increments_version(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 
@@ -283,7 +286,10 @@ pub async fn query_update_unique_index_increments_version(test: &mut Test) -> Re
 
 /// Updating a record through the unique-index path (path 3) increments the
 /// version when the unique column changes.
-#[driver_test(scenario(crate::scenarios::versioned_user_unique_email))]
+#[driver_test(
+    scenario(crate::scenarios::versioned_user_unique_email),
+    requires(unique_index)
+)]
 pub async fn unique_index_update_increments_version(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 
@@ -311,7 +317,10 @@ pub async fn unique_index_update_increments_version(test: &mut Test) -> Result<(
 
 /// Stale update on a model with a unique index: the second update from a stale
 /// snapshot should fail.
-#[driver_test(scenario(crate::scenarios::versioned_user_unique_email))]
+#[driver_test(
+    scenario(crate::scenarios::versioned_user_unique_email),
+    requires(unique_index)
+)]
 pub async fn unique_index_stale_update_fails(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 

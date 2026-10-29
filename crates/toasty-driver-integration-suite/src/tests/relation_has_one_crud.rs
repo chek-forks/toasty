@@ -1,6 +1,10 @@
 use crate::prelude::*;
 
-#[driver_test(id(ID), scenario(crate::scenarios::has_one_optional_belongs_to))]
+#[driver_test(
+    id(ID),
+    scenario(crate::scenarios::has_one_optional_belongs_to),
+    requires(unique_index)
+)]
 pub async fn crud_has_one_bi_direction_optional(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 
@@ -96,7 +100,7 @@ pub async fn crud_has_one_bi_direction_optional(test: &mut Test) -> Result<()> {
 // reply-channel `unwrap()` re-raised it. Since worker-gone channel errors
 // map to `connection_lost`, the caller now observes an error, which is
 // exactly what `assert_err!` below checks — the attribute is removed.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn crud_has_one_required_belongs_to_optional(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -148,7 +152,7 @@ pub async fn crud_has_one_required_belongs_to_optional(test: &mut Test) -> Resul
     Ok(())
 }
 
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn update_belongs_to_with_required_has_one_pair(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -254,7 +258,7 @@ pub async fn update_belongs_to_with_required_has_one_pair(test: &mut Test) -> Re
     Ok(())
 }
 
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn crud_has_one_optional_belongs_to_required(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -321,7 +325,7 @@ pub async fn set_has_one_by_value_in_update_query(test: &mut Test) -> Result<()>
     Ok(())
 }
 
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn unset_has_one_in_batch_update(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -391,7 +395,7 @@ pub async fn unset_has_one_in_batch_update(test: &mut Test) -> Result<()> {
     Ok(())
 }
 
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn unset_has_one_with_required_pair_in_pk_query_update(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -437,7 +441,7 @@ pub async fn unset_has_one_with_required_pair_in_pk_query_update(test: &mut Test
     Ok(())
 }
 
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn unset_has_one_with_required_pair_in_non_pk_query_update(
     test: &mut Test,
 ) -> Result<()> {
@@ -488,7 +492,7 @@ pub async fn unset_has_one_with_required_pair_in_non_pk_query_update(
     Ok(())
 }
 
-#[driver_test(id(ID))]
+#[driver_test(id(ID), requires(unique_index))]
 pub async fn associate_has_one_by_val_on_insert(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {

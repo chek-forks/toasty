@@ -178,7 +178,7 @@ pub async fn negated_direct_belongs_to_membership(t: &mut Test) -> Result<()> {
     Ok(())
 }
 
-#[driver_test(id(ID), requires(scan))]
+#[driver_test(id(ID), requires(and(unique_index, scan)))]
 pub async fn limited_membership_preserves_candidates(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {

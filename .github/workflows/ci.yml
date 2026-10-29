@@ -101,6 +101,8 @@ jobs:
             extra_args: ""
           - package: toasty-driver-mysql
             extra_args: ""
+          - package: toasty-driver-cassandra
+            extra_args: ""
           - package: toasty-driver-postgresql
             extra_args: ""
     steps:
@@ -315,6 +317,53 @@ jobs:
         run: cargo test --no-default-features --features dynamodb -- --test-threads 1
       - name: cargo test -p toasty-driver-dynamodb
         run: cargo test -p toasty-driver-dynamodb -- --test-threads 1
+
+  test-cassandra:
+    needs: check
+    name: Run tests for ${{ matrix.server }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - server: ScyllaDB
+            image: scylladb/scylla:6.2
+            args: --smp 1 --memory 1G --overprovisioned 1
+          - server: Cassandra
+            image: cassandra:5.0
+            args: ""
+    env:
+      TOASTY_TEST_CASSANDRA_URL: cassandra://127.0.0.1:9042/toasty_test
+      TOASTY_CONNECTION_URL: cassandra://127.0.0.1:9042/toasty
+      # Cassandra needs a smaller heap on a 16 GB runner.
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 100M
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VERSION }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Start ${{ matrix.server }}
+        run: sudo docker run --name cassandra -d -p 9042:9042 ${{ matrix.image }} ${{ matrix.args }}
+      - name: Wait for CQL
+        run: |
+          for i in $(seq 1 60); do
+            if sudo docker exec cassandra cqlsh -e 'SELECT now() FROM system.local' >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 5
+          done
+          sudo docker logs cassandra
+          exit 1
+      - name: cargo test
+        run: cargo test --no-default-features --features cassandra -- --test-threads 1
+      - name: cargo test -p toasty-driver-cassandra
+        run: cargo test -p toasty-driver-cassandra -- --test-threads 1
+      - name: Run the Cassandra example
+        run: cargo run -p example-cassandra-blog --no-default-features --features cassandra
 
   test-turso:
     needs: check

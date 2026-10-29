@@ -205,7 +205,7 @@ pub async fn required_field_create_without_setting(test: &mut Test) {
     assert_err!(User::create().exec(&mut db).await);
 }
 
-#[driver_test(scenario(crate::scenarios::user_unique_email))]
+#[driver_test(scenario(crate::scenarios::user_unique_email), requires(unique_index))]
 pub async fn unique_index_required_field_update(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 
@@ -310,7 +310,7 @@ pub async fn unique_index_required_field_update(test: &mut Test) -> Result<()> {
     Ok(())
 }
 
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn unique_index_nullable_field_update(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -392,7 +392,10 @@ pub async fn unique_index_nullable_field_update(test: &mut Test) -> Result<()> {
     Ok(())
 }
 
-#[driver_test(scenario(crate::scenarios::user_unique_email_with_name))]
+#[driver_test(
+    scenario(crate::scenarios::user_unique_email_with_name),
+    requires(unique_index)
+)]
 pub async fn unique_index_no_update(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 
@@ -419,7 +422,10 @@ pub async fn unique_index_no_update(test: &mut Test) -> Result<()> {
     Ok(())
 }
 
-#[driver_test(scenario(crate::scenarios::user_unique_email_with_name))]
+#[driver_test(
+    scenario(crate::scenarios::user_unique_email_with_name),
+    requires(unique_index)
+)]
 pub async fn unique_index_set_same_value(test: &mut Test) -> Result<()> {
     let mut db = setup(test).await;
 

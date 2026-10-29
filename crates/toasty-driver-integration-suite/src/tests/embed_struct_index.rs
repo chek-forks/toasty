@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 /// Tests that `#[unique]` and `#[index]` on embedded struct fields produce
 /// physical DB indices on the flattened columns.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn embedded_struct_index_schema(test: &mut Test) {
     #[derive(Debug, toasty::Embed)]
     struct Contact {
@@ -68,7 +68,7 @@ pub async fn embedded_struct_index_schema(test: &mut Test) {
 
 /// Tests that unique constraint on embedded struct field is enforced at the
 /// database level and that filtering by indexed embedded fields works.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn embedded_struct_unique_index_enforced(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Embed)]
     struct Contact {
@@ -131,7 +131,7 @@ pub async fn embedded_struct_unique_index_enforced(test: &mut Test) -> Result<()
 
 /// Tests that `#[index]` on a field inside a nested embedded struct (embed
 /// within embed) produces a physical DB index on the deeply-flattened column.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn nested_embedded_struct_index(test: &mut Test) {
     #[derive(Debug, toasty::Embed)]
     struct Geo {

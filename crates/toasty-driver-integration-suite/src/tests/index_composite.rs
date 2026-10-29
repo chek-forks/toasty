@@ -529,7 +529,7 @@ pub async fn composite_index_max_attributes(t: &mut Test) -> Result<()> {
 /// `#[index(a, b, c, d, e, f)]` in simple mode produces 1 HASH + 5 RANGE, which
 /// exceeds the DynamoDB limit of 4. The driver must return `Err(invalid_schema)`
 /// rather than panicking.
-#[driver_test(requires(not(sql)))]
+#[driver_test(requires(and(not(sql), dynamodb_index_limits)))]
 #[allow(clippy::too_many_arguments)]
 pub async fn composite_index_too_many_range_columns(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
@@ -682,7 +682,7 @@ pub async fn composite_unique_index_enforced(t: &mut Test) -> Result<()> {
 /// composite unique constraint would require a composite-key index table plus
 /// matching write synchronization, which is not implemented. Schema setup must
 /// surface a clean `unsupported_feature` error rather than panicking (DDB-only).
-#[driver_test(requires(not(sql)))]
+#[driver_test(requires(and(not(sql), dynamodb_index_limits)))]
 pub async fn composite_unique_index_unsupported_on_dynamodb(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     #[unique(org_id, slug)]

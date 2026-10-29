@@ -85,6 +85,7 @@ Database-specific driver implementations.
 - `toasty-driver-postgresql`: PostgreSQL implementation  
 - `toasty-driver-mysql`: MySQL implementation
 - `toasty-driver-dynamodb`: DynamoDB implementation
+- `toasty-driver-cassandra`: Apache Cassandra / ScyllaDB implementation
 
 ### 5. toasty-sql
 Converts statement AST to SQL strings. Used by SQL-based drivers.

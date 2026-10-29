@@ -98,6 +98,7 @@
 //! | `mysql`        | `toasty-driver-mysql`        |
 //! | `mariadb`      | `toasty-driver-mysql`        |
 //! | `dynamodb`     | `toasty-driver-dynamodb`     |
+//! | `cassandra`    | `toasty-driver-cassandra`    |
 //! | `turso`        | `toasty-driver-turso`        |
 //!
 //! Additional feature flags: `rust_decimal`, `bigdecimal`, `jiff` (date/time

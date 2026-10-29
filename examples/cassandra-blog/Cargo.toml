@@ -1,0 +1,21 @@
+[package]
+name = "example-cassandra-blog"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+publish = false
+
+[features]
+default = ["sqlite"]
+cassandra = ["toasty/cassandra"]
+sqlite = ["toasty/sqlite"]
+
+[dependencies]
+toasty.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+uuid.workspace = true
+
+[lints]
+workspace = true

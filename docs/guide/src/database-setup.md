@@ -52,6 +52,7 @@ requires its corresponding feature flag in `Cargo.toml`.
 | `mysql` | MySQL | `mysql` |
 | `mariadb` | MariaDB 11.8+ | `mariadb` |
 | `dynamodb` | DynamoDB | `dynamodb` |
+| `cassandra` or `scylla` | Apache Cassandra / ScyllaDB | `cassandra` |
 
 Examples:
 
@@ -73,6 +74,9 @@ Examples:
 
 // DynamoDB (uses AWS config from environment)
 .connect("dynamodb://us-east-1")
+
+// Cassandra or ScyllaDB (the path is the keyspace)
+.connect("cassandra://127.0.0.1:9042/my_keyspace")
 ```
 
 The `mariadb` feature uses `MariaDB` from the `toasty-driver-mysql` crate. MariaDB stores
@@ -129,6 +133,9 @@ let mut db = toasty::Db::builder()
 | `pool_create_timeout(Some(d))` | `None` | Maximum time to spend opening a new connection. |
 | `pool_health_check_interval(Some(d))` | `Some(60s)` | How often the background sweep pings an idle connection to detect a silently-broken backend. `None` disables the sweep. |
 | `pool_pre_ping(true)` | `false` | Ping every connection before handing it to the caller. Adds one round-trip per checkout in exchange for guaranteeing the caller sees a live connection. |
+
+The DynamoDB and Cassandra drivers manage their own connections internally, so
+these knobs do not apply to them.
 
 ### Recovering from a backend restart
 

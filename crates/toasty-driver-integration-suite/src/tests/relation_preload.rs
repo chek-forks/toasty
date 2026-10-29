@@ -355,7 +355,7 @@ pub async fn preload_has_many_with_optional_belongs_to(test: &mut Test) -> Resul
 /// `Deferred<Option<T>>` + `Deferred<T>` (required FK): the child always points
 /// to a parent, but the parent may or may not have a child. Tests preloading
 /// from both directions.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn preload_has_one_optional_with_required_belongs_to(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -429,7 +429,7 @@ pub async fn preload_has_one_optional_with_required_belongs_to(test: &mut Test) 
 /// `Deferred<T>` (required) + `Deferred<Option<T>>`: creating a parent requires
 /// providing a child, but the child FK is nullable. Tests preloading from both
 /// directions.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn preload_has_one_required_with_optional_belongs_to(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -537,7 +537,7 @@ pub async fn nested_has_many_preload(test: &mut Test) {
 
 // ===== HasMany -> Deferred<Option<T>> =====
 // User has_many Posts, each Post has_one optional Detail
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn nested_has_many_then_has_one_optional(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     #[allow(dead_code)]
@@ -625,7 +625,7 @@ pub async fn nested_has_many_then_has_one_optional(test: &mut Test) -> Result<()
 
 // ===== HasMany -> Deferred<T> (required) =====
 // User has_many Accounts, each Account has_one required Settings
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn nested_has_many_then_has_one_required(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     #[allow(dead_code)]
@@ -889,7 +889,7 @@ pub async fn nested_has_many_then_belongs_to_optional(test: &mut Test) -> Result
 
 // ===== Deferred<Option<T>> -> HasMany =====
 // User has_one optional Profile, Profile has_many Badges
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn nested_has_one_optional_then_has_many(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     #[allow(dead_code)]
@@ -984,7 +984,7 @@ pub async fn nested_has_one_optional_then_has_many(test: &mut Test) -> Result<()
 
 // ===== Deferred<T> (required) -> HasMany =====
 // Order has_one required Invoice, Invoice has_many LineItems
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn nested_has_one_required_then_has_many(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     #[allow(dead_code)]
@@ -1068,7 +1068,7 @@ pub async fn nested_has_one_required_then_has_many(test: &mut Test) -> Result<()
 
 // ===== Deferred<Option<T>> -> Deferred<Option<T>> =====
 // User has_one optional Profile, Profile has_one optional Avatar
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn nested_has_one_optional_then_has_one_optional(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     #[allow(dead_code)]
@@ -1172,7 +1172,7 @@ pub async fn nested_has_one_optional_then_has_one_optional(test: &mut Test) -> R
 
 // ===== Deferred<T> (required) -> Deferred<T> (required) =====
 // User has_one required Profile, Profile has_one required Avatar
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn nested_has_one_required_then_has_one_required(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     #[allow(dead_code)]
@@ -1249,7 +1249,7 @@ pub async fn nested_has_one_required_then_has_one_required(test: &mut Test) -> R
 
 // ===== Deferred<Option<T>> -> Deferred<T> (required) =====
 // User has_one optional Review, Review belongs_to a Product
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn nested_has_one_optional_then_belongs_to_required(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     #[allow(dead_code)]
@@ -1416,7 +1416,7 @@ pub async fn nested_belongs_to_required_then_has_many(test: &mut Test) -> Result
 
 // ===== Deferred<T> (required) -> Deferred<Option<T>> =====
 // Todo belongs_to a User, User has_one optional Profile
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn nested_belongs_to_required_then_has_one_optional(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     #[allow(dead_code)]
@@ -1729,7 +1729,7 @@ pub async fn nested_belongs_to_optional_then_belongs_to_optional(test: &mut Test
 
 // ===== Deferred<T> -> Deferred<T> (required) =====
 // Todo belongs_to a User, User has_one required Config
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn nested_belongs_to_required_then_has_one_required(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     #[allow(dead_code)]

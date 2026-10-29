@@ -53,7 +53,7 @@ pub async fn different_field_name(test: &mut Test) -> Result<()> {
 // `#[has_one(pair = <field>)]` was accepted but ignored, so the generated
 // back-reference check still looked for a `BelongsTo` field named after the
 // parent model instead of the configured pair.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn has_one_different_field_name(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct Parent {

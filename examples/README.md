@@ -16,6 +16,7 @@ these examples for runnable versions of what it describes.
 | [crm-embedded](crm-embedded) | Embedded value types: flattened structs, tagged-union enums, newtype keys, and partial embed updates with `stmt::patch`. |
 | [store-operations](store-operations) | Writes: interactive transactions, savepoints, batch inserts, query-based update and delete, and raw SQL. |
 | [service-ops](service-ops) | Project layout: shared models in a library, an application binary, and a migration CLI built from `toasty-cli`. |
+| [cassandra-blog](cassandra-blog) | A model shaped for Cassandra/ScyllaDB: UUID keys, a composite partition/clustering key, a native `list<text>` field, and CRUD over one partition. |
 
 ## Running an example
 
@@ -39,6 +40,20 @@ enable the matching driver feature (`sqlite` is the default; `postgresql` and
 TOASTY_CONNECTION_URL=postgresql://user:pass@localhost/mydb \
   cargo run -p example-product-search --features postgresql
 ```
+
+### Running against Cassandra or ScyllaDB
+
+`cassandra-blog` also runs against Cassandra/ScyllaDB. Start the local node
+from the repository root, then enable the `cassandra` feature:
+
+```sh
+docker compose up -d scylla
+cargo run -p example-cassandra-blog --no-default-features --features cassandra
+```
+
+`TOASTY_CONNECTION_URL=cassandra://host:9042/keyspace` overrides the default
+`cassandra://127.0.0.1:9042/toasty`. Without `--no-default-features` the
+example runs on in-memory SQLite, like the others.
 
 ### service-ops
 

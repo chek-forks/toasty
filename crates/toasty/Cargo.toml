@@ -15,6 +15,7 @@ documentation = "https://docs.rs/toasty"
 
 [features]
 default = ["rustls"]
+cassandra = ["dep:toasty-driver-cassandra"]
 dynamodb = ["dep:toasty-driver-dynamodb"]
 migration = ["dep:serde", "dep:toml", "dep:toml_edit", "toasty-core/migration"]
 mysql = ["dep:toasty-driver-mysql"]
@@ -65,6 +66,7 @@ toasty-macros.workspace = true
 toasty-core.workspace = true
 
 # Built-in database drivers
+toasty-driver-cassandra = { workspace = true, optional = true }
 toasty-driver-dynamodb = { workspace = true, optional = true }
 toasty-driver-mysql = { workspace = true, optional = true }
 toasty-driver-postgresql = { workspace = true, optional = true }

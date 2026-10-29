@@ -416,7 +416,7 @@ pub async fn nested_variant_composite_relation_traversal(test: &mut Test) -> Res
 /// stored keys back, the owner loads with an ordinary `get_by_*`, and
 /// changing the owner — including its kind — is a whole-value replacement of
 /// the embed.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn belongs_to_in_enum_variants(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct Human {
@@ -880,7 +880,7 @@ pub async fn optional_relation_carrying_embed(test: &mut Test) -> Result<()> {
 /// `references = serial` key. In a plain (complete) literal, a loaded
 /// relation value fills the key the same way, winning over the explicitly
 /// written key.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn write_relation_from_parent_value(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct Human {

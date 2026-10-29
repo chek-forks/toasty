@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 /// Tests that `#[unique]` and `#[index]` on embedded enum variant fields produce
 /// physical DB indices on the flattened columns.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn embedded_enum_index_schema(test: &mut Test) {
     #[derive(Debug, toasty::Embed)]
     enum ContactInfo {
@@ -58,7 +58,7 @@ pub async fn embedded_enum_index_schema(test: &mut Test) {
 
 /// Tests that unique constraint on embedded enum variant field is enforced at
 /// the database level.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn embedded_enum_unique_index_enforced(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Embed)]
     enum ContactInfo {
@@ -143,7 +143,7 @@ pub async fn embedded_enum_unique_index_enforced(test: &mut Test) -> Result<()> 
 ///
 /// Before the fix, building the schema panicked because the index-column
 /// resolver had no case for enum mappings.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn unit_enum_field_index_schema(test: &mut Test) {
     #[derive(Debug, toasty::Embed)]
     enum EntityType {
@@ -183,7 +183,7 @@ pub async fn unit_enum_field_index_schema(test: &mut Test) {
 
 /// Regression test for #973: queries filtering on an indexed unit enum field
 /// return the correct rows across all drivers.
-#[driver_test]
+#[driver_test(requires(unique_index))]
 pub async fn unit_enum_field_index_filter(test: &mut Test) -> Result<()> {
     #[derive(Debug, PartialEq, toasty::Embed)]
     enum EntityType {
@@ -228,7 +228,7 @@ pub async fn unit_enum_field_index_filter(test: &mut Test) -> Result<()> {
 /// DynamoDB does not support composite unique indices (see
 /// `composite_unique_index_unsupported_on_dynamodb` in `index_composite`), so
 /// this is SQL-only.
-#[driver_test(requires(sql))]
+#[driver_test(requires(and(unique_index, sql)))]
 pub async fn unit_enum_composite_unique_enforced(test: &mut Test) -> Result<()> {
     #[derive(Debug, PartialEq, toasty::Embed)]
     enum EntityType {

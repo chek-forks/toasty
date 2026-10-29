@@ -55,6 +55,14 @@ pub const TEST_FLAGS: &[&str] = &[
     // the prepare with an unknown-column-type protocol error, dropping the
     // connection.
     "cte_unreferenced",
+    // DynamoDB limits an index to one HASH key and four RANGE keys. The test
+    // asserts that the driver rejects a wider index; SQL and Cassandra have no
+    // such limit (Cassandra does not use composite secondary indexes).
+    "dynamodb_index_limits",
+    // DynamoDB rejects an empty string key value, and some key-condition tests
+    // assert that rejection. Cassandra accepts an empty prefix as a match-all
+    // `LIKE '%'`.
+    "dynamodb_key_semantics",
 ];
 
 /// Returns `true` if `name` is a [test flag](TEST_FLAGS) rather than a driver

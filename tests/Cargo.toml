@@ -38,6 +38,7 @@ mariadb = [
     "dep:sqlx-mysql",
 ]
 dynamodb = ["toasty/dynamodb", "dep:toasty-driver-dynamodb", "dep:aws-config", "dep:aws-sdk-dynamodb"]
+cassandra = ["toasty/cassandra", "dep:toasty-driver-cassandra", "dep:scylla"]
 postgresql = ["toasty/postgresql", "dep:toasty-driver-postgresql", "dep:tokio-postgres"]
 
 [dependencies]
@@ -60,6 +61,7 @@ toasty-driver-integration-suite.workspace = true
 # Database drivers
 toasty-driver-sqlite = { workspace = true, optional = true }
 toasty-driver-turso = { workspace = true, optional = true }
+toasty-driver-cassandra = { workspace = true, optional = true }
 turso_serverless = { workspace = true, optional = true }
 reqwest = { version = "0.13", default-features = false, features = [
 	"blocking",
@@ -75,6 +77,7 @@ toasty-driver-dynamodb = { workspace = true, optional = true }
 tokio-postgres = { workspace = true, optional = true }
 sqlx-core = { workspace = true, optional = true }
 sqlx-mysql = { workspace = true, optional = true }
+scylla = { workspace = true, optional = true }
 aws-config = { workspace = true, optional = true }
 aws-sdk-dynamodb = { workspace = true, optional = true }
 

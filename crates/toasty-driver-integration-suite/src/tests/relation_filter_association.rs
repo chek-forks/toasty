@@ -3,7 +3,7 @@
 use crate::prelude::*;
 
 /// Filter a parent by a HasOne field, with eq and a non-commutative op.
-#[driver_test(requires(sql))]
+#[driver_test(requires(and(unique_index, sql)))]
 pub async fn filter_by_has_one_field(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct User {
@@ -129,7 +129,7 @@ pub async fn filter_by_relation_field_like(test: &mut Test) -> Result<()> {
 }
 
 /// Filter through three chained HasOne associations: `A.b.c.name == ...`.
-#[driver_test(id(ID), requires(sql))]
+#[driver_test(id(ID), requires(and(unique_index, sql)))]
 pub async fn filter_by_nested_has_one_chain(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct A {

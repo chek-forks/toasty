@@ -249,7 +249,7 @@ pub async fn paginate_accepts_cursor_without_hidden_primary_key(test: &mut Test)
     Ok(())
 }
 
-#[driver_test(requires(sql))]
+#[driver_test(requires(and(unique_index, sql)))]
 pub async fn paginate_unique_non_nullable_column_needs_no_tiebreaker(
     test: &mut Test,
 ) -> Result<()> {
@@ -312,7 +312,7 @@ pub async fn paginate_composite_unique_non_nullable_order_needs_no_tiebreaker(
     Ok(())
 }
 
-#[driver_test(requires(sql))]
+#[driver_test(requires(and(unique_index, sql)))]
 pub async fn paginate_nullable_unique_column_uses_primary_key(test: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct Item {

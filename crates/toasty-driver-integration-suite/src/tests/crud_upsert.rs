@@ -171,7 +171,7 @@ pub async fn upsert_or_ignore_returns_option(test: &mut Test) -> Result<()> {
 }
 
 #[driver_test(
-    requires(and(upsert_primary_key, upsert_targeted_ignore)),
+    requires(and(unique_index, upsert_primary_key, upsert_targeted_ignore)),
     scenario(crate::scenarios::user_unique_email_with_name)
 )]
 pub async fn upsert_or_ignore_suppresses_only_the_selected_conflict(test: &mut Test) -> Result<()> {
@@ -619,7 +619,7 @@ pub async fn unsupported_upsert_branches_are_reported_before_dispatch(
 }
 
 #[driver_test(
-    requires(and(upsert_primary_key, not(upsert_unique))),
+    requires(and(unique_index, upsert_primary_key, not(upsert_unique))),
     scenario(crate::scenarios::user_unique_email_with_name)
 )]
 pub async fn unsupported_unique_upsert_is_reported_before_dispatch(test: &mut Test) -> Result<()> {

@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 
-#[driver_test(requires(unique_list_index))]
+#[driver_test(requires(and(unique_index, unique_list_index)))]
 pub async fn unique_vec_uses_ordered_complete_value(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct Item {
@@ -56,7 +56,7 @@ pub async fn unique_vec_uses_ordered_complete_value(t: &mut Test) -> Result<()> 
     Ok(())
 }
 
-#[driver_test(requires(and(unique_list_index, upsert_unique)))]
+#[driver_test(requires(and(unique_index, and(unique_list_index, upsert_unique))))]
 pub async fn unique_vec_generated_operations(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Model)]
     struct Item {
@@ -105,7 +105,7 @@ pub async fn unique_vec_generated_operations(t: &mut Test) -> Result<()> {
     Ok(())
 }
 
-#[driver_test(requires(unique_list_index))]
+#[driver_test(requires(and(unique_index, unique_list_index)))]
 pub async fn unique_vec_newtype(t: &mut Test) -> Result<()> {
     #[derive(Debug, toasty::Embed)]
     struct Tags(Vec<String>);
@@ -141,7 +141,7 @@ pub async fn unique_vec_newtype(t: &mut Test) -> Result<()> {
     Ok(())
 }
 
-#[driver_test(requires(and(vec_scalar, not(unique_list_index))))]
+#[driver_test(requires(and(unique_index, and(vec_scalar, not(unique_list_index)))))]
 pub async fn unique_vec_unsupported_backend(t: &mut Test) {
     #[derive(Debug, toasty::Model)]
     struct Item {

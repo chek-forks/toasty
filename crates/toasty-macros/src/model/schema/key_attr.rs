@@ -125,18 +125,12 @@ impl KeyAttr {
             partition = iter.next().into_iter().collect();
             local = iter.collect();
         } else {
-            // Named mode: require both partition and local
+            // Named mode: require at least one partition field. An empty
+            // clustering key is valid (partition-only primary key).
             if partition.is_empty() {
                 return Err(syn::Error::new_spanned(
                     attr,
                     "expected at least one `partition` field",
-                ));
-            }
-
-            if local.is_empty() {
-                return Err(syn::Error::new_spanned(
-                    attr,
-                    "expected at least one `local` field",
                 ));
             }
         }
@@ -147,5 +141,30 @@ impl KeyAttr {
             name,
             unique: false,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn allows_partition_only_named_key() {
+        let attr: syn::Attribute = syn::parse_quote!(#[key(partition = [a, b])]);
+        let names = vec![
+            syn::parse_str::<syn::Ident>("a").unwrap(),
+            syn::parse_str::<syn::Ident>("b").unwrap(),
+        ];
+
+        let key = KeyAttr::from_ast(&attr, &names).unwrap();
+
+        assert_eq!(
+            key.partition
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>(),
+            ["a", "b"]
+        );
+        assert!(key.local.is_empty());
     }
 }

@@ -7,11 +7,31 @@ use toasty_core::{
     stmt::{self, Value, ValueObject, ValueRecord},
 };
 
+/// Returns the CQL type name when `ty` is a native `map<text, text>` column.
+pub(crate) fn native_map_name(ty: &toasty_core::schema::db::Type) -> Option<&str> {
+    let toasty_core::schema::db::Type::Custom(name) = ty else {
+        return None;
+    };
+
+    let inner = name.strip_prefix("map<")?.strip_suffix('>')?;
+    let (key, value) = inner.split_once(',')?;
+
+    fn is_text(ty: &str) -> bool {
+        matches!(ty.trim().to_ascii_lowercase().as_str(), "text" | "varchar")
+    }
+
+    (is_text(key) && is_text(value)).then_some(name.as_str())
+}
+
 /// Encodes a value for the given column, narrowing it to the column's
 /// application type first.
 pub(crate) fn encode_for_column(column: &Column, value: &Value) -> Result<Option<CqlValue>> {
     if value.is_null() {
         return Ok(None);
+    }
+
+    if native_map_name(&column.storage_ty).is_some() {
+        return encode_native_map(value).map(Some);
     }
 
     // Documents (embedded structs and `Vec<embed>`) are stored as JSON text;
@@ -123,6 +143,66 @@ pub(crate) fn encode(value: &Value) -> Result<Option<CqlValue>> {
     };
 
     Ok(Some(value))
+}
+
+fn encode_native_map(value: &Value) -> Result<CqlValue> {
+    let json = match value {
+        Value::String(text) => serde_json::from_str::<serde_json::Value>(text)
+            .map_err(|error| Error::invalid_statement(error.to_string()))?,
+        Value::Object(object) => object_to_json(object)?,
+        other => {
+            return Err(Error::invalid_statement(format!(
+                "expected a JSON object for a native map column, got {other:?}"
+            )));
+        }
+    };
+
+    let serde_json::Value::Object(map) = json else {
+        return Err(Error::invalid_statement(
+            "a native map column requires a JSON object value",
+        ));
+    };
+
+    map.into_iter()
+        .map(|(key, value)| match value {
+            serde_json::Value::String(value) => Ok((CqlValue::Text(key), CqlValue::Text(value))),
+            _ => Err(Error::invalid_statement(
+                "native map column values must be strings",
+            )),
+        })
+        .collect::<Result<Vec<_>>>()
+        .map(CqlValue::Map)
+}
+
+fn decode_native_map(entries: &[(CqlValue, CqlValue)]) -> Result<Value> {
+    let mut map = serde_json::Map::with_capacity(entries.len());
+
+    for (key, value) in entries {
+        let key = match key {
+            CqlValue::Text(key) | CqlValue::Ascii(key) => key.clone(),
+            other => {
+                return Err(Error::invalid_result(format!(
+                    "native map key is not text: {other:?}"
+                )));
+            }
+        };
+
+        let value = match value {
+            CqlValue::Text(value) | CqlValue::Ascii(value) => value.clone(),
+            other => {
+                return Err(Error::invalid_result(format!(
+                    "native map value is not text: {other:?}"
+                )));
+            }
+        };
+
+        map.insert(key, serde_json::Value::String(value));
+    }
+
+    Ok(Value::String(
+        serde_json::to_string(&serde_json::Value::Object(map))
+            .map_err(|error| Error::invalid_result(error.to_string()))?,
+    ))
 }
 
 /// Decodes a CQL value into a Toasty value of the requested application type.
@@ -262,7 +342,13 @@ pub(crate) fn decode_row(row: &Row, columns: &[&Column]) -> Result<ValueRecord> 
     let mut fields = Vec::with_capacity(columns.len());
 
     for (column, value) in columns.iter().zip(row.columns.iter()) {
-        fields.push(decode(&column.ty, value.as_ref())?);
+        if native_map_name(&column.storage_ty).is_some()
+            && let Some(CqlValue::Map(entries)) = value.as_ref()
+        {
+            fields.push(decode_native_map(entries)?);
+        } else {
+            fields.push(decode(&column.ty, value.as_ref())?);
+        }
     }
 
     Ok(ValueRecord::from_vec(fields))
@@ -428,6 +514,52 @@ mod tests {
             auto_increment: false,
             versionable: false,
         }
+    }
+
+    fn native_map_column(ty: Type) -> Column {
+        Column {
+            storage_ty: toasty_core::schema::db::Type::Custom("map<text,text>".into()),
+            ..column(ty)
+        }
+    }
+
+    #[test]
+    fn map_round_trips_through_native_cql() {
+        let column = native_map_column(Type::String);
+        let encoded = encode_for_column(&column, &Value::String(r#"{"a":"1","b":"2"}"#.into()))
+            .unwrap()
+            .unwrap();
+
+        let CqlValue::Map(entries) = &encoded else {
+            panic!("expected a CQL map, got {encoded:?}");
+        };
+        assert_eq!(entries.len(), 2);
+
+        let decoded = decode_native_map(entries).unwrap();
+        let Value::String(decoded) = decoded else {
+            panic!("expected a JSON string, got {decoded:?}");
+        };
+
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&decoded).unwrap(),
+            serde_json::json!({ "a": "1", "b": "2" })
+        );
+    }
+
+    #[test]
+    fn non_text_map_is_not_native() {
+        assert!(
+            native_map_name(&toasty_core::schema::db::Type::Custom(
+                "map<int,int>".into()
+            ))
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn map_rejects_non_string_json_values() {
+        let column = native_map_column(Type::String);
+        assert!(encode_for_column(&column, &Value::String(r#"{"a":1}"#.into())).is_err());
     }
 
     #[test]

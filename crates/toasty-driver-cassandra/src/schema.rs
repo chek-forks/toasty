@@ -4,7 +4,7 @@ use toasty_core::{
     stmt,
 };
 
-use crate::Config;
+use crate::{Config, value::native_map_name};
 
 /// Returns the CQL statement that creates the configured keyspace.
 pub(crate) fn create_keyspace(config: &Config) -> String {
@@ -85,7 +85,8 @@ pub(crate) fn validate(schema: &db::Schema, config: &Config) -> Result<()> {
             if matches!(
                 column.storage_ty,
                 db::Type::List(_) | db::Type::Document { .. }
-            ) {
+            ) || native_map_name(&column.storage_ty).is_some()
+            {
                 return Err(Error::invalid_schema(format!(
                     "Cassandra primary-key column `{}.{}` cannot be a collection or document",
                     table.name, column.name
@@ -188,6 +189,7 @@ pub(crate) fn create_index(
             column.storage_ty,
             db::Type::List(_) | db::Type::Document { .. }
         )
+        || native_map_name(&column.storage_ty).is_some()
     {
         return Ok(None);
     }
@@ -277,9 +279,13 @@ fn cql_type(ty: &db::Type) -> Result<String> {
         | db::Type::Enum(_) => "text".into(),
         db::Type::List(elem) => format!("list<{}>", cql_type(elem)?),
         db::Type::Custom(name) => {
-            return Err(Error::unsupported_feature(format!(
-                "Cassandra driver does not support custom column type `{name}`"
-            )));
+            if native_map_name(ty).is_some() {
+                name.clone()
+            } else {
+                return Err(Error::unsupported_feature(format!(
+                    "Cassandra driver does not support custom column type `{name}`"
+                )));
+            }
         }
     })
 }
@@ -403,6 +409,15 @@ mod tests {
             create_keyspace(&config()),
             "CREATE KEYSPACE IF NOT EXISTS \"ks\" WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}"
         );
+    }
+
+    #[test]
+    fn renders_native_text_map_columns() {
+        assert_eq!(
+            cql_type(&db::Type::Custom("map<text,text>".into())).unwrap(),
+            "map<text,text>"
+        );
+        assert!(cql_type(&db::Type::Custom("weird".into())).is_err());
     }
 
     #[test]

@@ -33,6 +33,14 @@ pub struct Delete {
     /// Unlike `filter`, a failing condition surfaces as an error rather than
     /// silently skipping the record.
     pub condition: Condition,
+
+    /// When `true`, report a count of zero if no record matched instead of
+    /// counting the delete as an unconditional success.
+    ///
+    /// Backends whose delete reports affected rows already behave this way.
+    /// Cassandra has no affected-row count, so the driver reads the record
+    /// first; the flag makes that extra read explicit.
+    pub if_exists: bool,
 }
 
 impl Delete {

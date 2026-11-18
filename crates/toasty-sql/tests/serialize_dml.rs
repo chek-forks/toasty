@@ -162,6 +162,7 @@ fn delete_stmt(with_where: bool, returning: Option<Returning>) -> stmt::Statemen
         filter,
         returning,
         condition: stmt::Condition::default(),
+        if_exists: false,
     }
     .into()
 }

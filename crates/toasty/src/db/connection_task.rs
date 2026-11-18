@@ -230,7 +230,9 @@ impl ConnectionTask {
             .await?;
         response.values.buffer().await?;
 
-        if single {
+        // A write with no returning clause reports a count, which is never a
+        // single-row query result; leave it for the caller intact.
+        if single && !response.values.is_count() {
             let Rows::Value(Value::List(mut items)) = response.values else {
                 unreachable!()
             };

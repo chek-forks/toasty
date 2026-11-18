@@ -80,7 +80,13 @@ impl dyn Executor + '_ {
     /// ```
     pub async fn exec<T: Load>(&mut self, stmt: Statement<T>) -> Result<T::Output> {
         let response = self.exec_untyped(stmt.untyped).await?;
-        let value = response.values.collect_as_value().await?;
+        let value = match response.values {
+            // A write with no returning clause reports an affected-row count,
+            // not a value. The typed API only asks for a write's count through
+            // `Delete::exec_count`, so load a unit value here.
+            toasty_core::driver::Rows::Count(_) => toasty_core::stmt::Value::Null,
+            rows => rows.collect_as_value().await?,
+        };
         T::load(value)
     }
 }

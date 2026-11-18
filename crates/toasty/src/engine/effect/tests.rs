@@ -41,6 +41,7 @@ fn simple_delete() -> Delete {
         filter: Filter::default(),
         returning: None,
         condition: Condition::default(),
+        if_exists: false,
     }
 }
 

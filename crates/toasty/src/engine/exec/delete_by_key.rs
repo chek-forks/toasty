@@ -29,6 +29,7 @@ impl Exec<'_> {
                     keys: vec![key],
                     filter: action.filter.clone(),
                     condition: action.condition.clone(),
+                    if_exists: action.if_exists,
                 };
 
                 let res = self.connection.exec(&self.engine.schema, op.into()).await?;

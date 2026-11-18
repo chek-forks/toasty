@@ -134,7 +134,16 @@ impl Engine {
         exec.vars.assert_empty();
 
         let value_stream = match response.values {
-            Rows::Count(_) => ValueStream::default(),
+            // A write with no returning clause reports an affected-row count.
+            // Preserve it so callers can distinguish "removed nothing" from
+            // "removed one row"; the typed executor maps it to a unit value.
+            Rows::Count(count) => {
+                return Ok(ExecResponse {
+                    values: Rows::Count(count),
+                    next_cursor: response.next_cursor,
+                    prev_cursor: response.prev_cursor,
+                });
+            }
             Rows::Value(stmt::Value::List(items)) => ValueStream::from_vec(items),
             // TODO have the public API be able to handle single rows
             Rows::Value(value) => ValueStream::from_vec(vec![value]),

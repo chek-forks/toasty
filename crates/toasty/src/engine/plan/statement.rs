@@ -1920,6 +1920,7 @@ impl<'a, 'b> PlanStatement<'a, 'b> {
                     table: index_plan.table_id(),
                     filter,
                     condition,
+                    if_exists: delete_stmt.if_exists,
                     ty: stmt::Type::Unit,
                 })
             }

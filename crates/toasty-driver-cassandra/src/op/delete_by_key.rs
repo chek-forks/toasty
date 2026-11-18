@@ -17,7 +17,10 @@ impl Connection {
         let mut count = 0_u64;
 
         for key in &op.keys {
-            if op.filter.is_some() || op.condition.is_some() {
+            // `if_exists` needs the same read as a filter or condition: the
+            // delete itself reports no affected-row count, so the only way to
+            // know a key matched nothing is to look first.
+            if op.filter.is_some() || op.condition.is_some() || op.if_exists {
                 let Some(record) = self.read_row_by_key(table, key).await? else {
                     if op.condition.is_some() {
                         return Err(Error::record_not_found("conditional delete matched no row"));

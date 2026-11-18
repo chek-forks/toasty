@@ -34,6 +34,10 @@ pub struct DeleteByKey {
     /// with an error if the condition is not met (unlike `filter`, which
     /// silently skips non-matching records).
     pub condition: Option<stmt::Expr>,
+
+    /// When `true`, a key that matches no stored record counts as zero deleted
+    /// rows instead of an unconditional success.
+    pub if_exists: bool,
 }
 
 impl From<DeleteByKey> for Operation {

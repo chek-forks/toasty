@@ -13,6 +13,12 @@ impl Connection {
     ) -> Result<ExecResponse> {
         use aws_sdk_dynamodb::operation::delete_item::DeleteItemError;
 
+        if op.if_exists {
+            return Err(toasty_core::Error::unsupported_feature(
+                "DynamoDB cannot report whether the deleted item existed",
+            ));
+        }
+
         let table = schema.table(op.table);
         let cx = ExprContext::new_with_target(schema, table);
 

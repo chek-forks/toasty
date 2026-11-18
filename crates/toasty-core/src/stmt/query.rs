@@ -167,6 +167,7 @@ impl Query {
                 filter: select.filter,
                 returning: None,
                 condition: Default::default(),
+                if_exists: false,
             },
             _ => todo!("{self:#?}"),
         }

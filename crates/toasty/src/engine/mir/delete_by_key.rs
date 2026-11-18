@@ -24,6 +24,9 @@ pub(crate) struct DeleteByKey {
     /// Optional condition for optimistic locking (e.g., version check).
     pub(crate) condition: Option<stmt::Expr>,
 
+    /// When `true`, a key with no stored record counts as zero deleted rows.
+    pub(crate) if_exists: bool,
+
     /// The return type.
     pub(crate) ty: stmt::Type,
 }

@@ -75,6 +75,31 @@ impl<T> Delete<T> {
         self.untyped.condition = condition;
         self
     }
+
+    /// Count a key that matches no stored record as zero removed records.
+    ///
+    /// Backends that report affected rows already behave this way. Cassandra
+    /// has no affected-row count, so its driver reads the record first.
+    pub fn if_exists(mut self) -> Self {
+        self.untyped.if_exists = true;
+        self
+    }
+
+    /// Execute this delete and return the number of records removed.
+    ///
+    /// [`exec`](Delete::exec) discards the count. Use this when the caller
+    /// needs to know whether anything matched — for example to report a
+    /// not-found result.
+    pub async fn exec_count(self, executor: &mut dyn Executor) -> Result<u64> {
+        let response = executor.exec_untyped(self.untyped.into()).await?;
+
+        match response.values {
+            toasty_core::driver::Rows::Count(count) => Ok(count),
+            _ => Err(toasty_core::Error::invalid_result(
+                "delete did not return an affected-row count",
+            )),
+        }
+    }
 }
 
 impl<T: Load> Delete<T> {

@@ -122,6 +122,7 @@ fn insert_basic(returning: Option<Returning>) -> stmt::Statement {
         source,
         upsert: None,
         returning,
+        ttl: None,
     }
     .into()
 }
@@ -143,6 +144,7 @@ fn update_stmt(with_where: bool, returning: Option<Returning>) -> stmt::Statemen
         filter,
         condition: stmt::Condition::default(),
         returning,
+        ttl: None,
     }
     .into()
 }

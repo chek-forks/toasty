@@ -117,6 +117,7 @@ pub mod select_projection_has_many;
 pub mod select_projection_has_one;
 pub mod select_projection_wide;
 pub mod starts_with;
+pub mod ttl;
 pub mod tx_atomic_stmt;
 pub mod tx_interactive;
 pub mod tx_lock_mode;

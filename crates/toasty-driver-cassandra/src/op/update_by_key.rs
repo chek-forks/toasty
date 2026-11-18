@@ -7,7 +7,7 @@ use toasty_core::{
 
 use crate::{
     Connection, cql,
-    op::{apply_assignments, project},
+    op::{apply_assignments, project, ttl_bind},
     schema, value,
 };
 
@@ -38,7 +38,10 @@ impl Connection {
 
         for key in &op.keys {
             if simple {
-                if self.fast_update(table, key, &op.assignments).await? {
+                if self
+                    .fast_update(table, key, &op.assignments, op.ttl)
+                    .await?
+                {
                     count += 1;
                 }
                 continue;
@@ -61,7 +64,15 @@ impl Connection {
             let columns = cql::all_columns(table);
 
             let applied = self
-                .write_row(table, key, &updated, &columns, op.condition.as_ref(), false)
+                .write_row(
+                    table,
+                    key,
+                    &updated,
+                    &columns,
+                    op.condition.as_ref(),
+                    false,
+                    op.ttl,
+                )
                 .await?;
 
             if !applied {
@@ -93,9 +104,15 @@ impl Connection {
         table: &db::Table,
         key: &stmt::Value,
         assignments: &stmt::Assignments,
+        ttl: Option<i64>,
     ) -> Result<bool> {
         let mut sets = Vec::new();
         let mut binds = Vec::new();
+
+        // `USING TTL ?` precedes `SET`, so its bind is pushed first.
+        if let Some(bind) = ttl_bind(ttl)? {
+            binds.push(Some(bind));
+        }
 
         for (projection, assignment) in assignments.iter() {
             let Assignment::Set(expr) = assignment else {
@@ -119,11 +136,11 @@ impl Connection {
             return Ok(false);
         }
 
-        let cql = format!(
-            "UPDATE {} SET {} WHERE {}",
-            schema::qualified(&self.config, &table.name),
-            sets.join(", "),
-            cql::pk_where(table)
+        let cql = crate::op::update_cql(
+            &schema::qualified(&self.config, &table.name),
+            &sets.join(", "),
+            &cql::pk_where(table),
+            ttl.is_some(),
         );
         binds.extend(value::key_binds(table, key)?);
 

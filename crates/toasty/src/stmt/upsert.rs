@@ -93,6 +93,15 @@ impl<M: Model> Upsert<M> {
         &mut self.untyped
     }
 
+    /// Set a per-write time-to-live in seconds (CQL `USING TTL`).
+    ///
+    /// Applies to both branches: the insert and, when the row already exists,
+    /// the update.
+    pub fn ttl(mut self, seconds: i64) -> Self {
+        self.untyped.ttl = Some(seconds);
+        self
+    }
+
     /// Consumes the wrapper and returns its untyped statement.
     #[doc(hidden)]
     pub fn into_untyped(self) -> stmt::Statement {

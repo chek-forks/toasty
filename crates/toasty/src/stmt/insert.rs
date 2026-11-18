@@ -65,6 +65,7 @@ impl<M: Model> Insert<M> {
                 ]),
                 upsert: None,
                 returning: Some(stmt::Returning::Model { include: vec![] }),
+                ttl: None,
             },
             _p: PhantomData,
         }
@@ -93,6 +94,30 @@ impl<M: Model> Insert<M> {
     {
         self.untyped.target =
             stmt::InsertTarget::Scope(Box::new(scope.into_scope().into_untyped_query()));
+    }
+
+    /// Set a per-write time-to-live in seconds (CQL `USING TTL`).
+    ///
+    /// Only backends with
+    /// [`Capability::native_ttl`](toasty_core::driver::Capability::native_ttl)
+    /// accept a TTL; every other backend rejects the statement with
+    /// [`unsupported_feature`](toasty_core::Error::unsupported_feature).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug, toasty::Model)]
+    /// # struct Session {
+    /// #     #[key]
+    /// #     id: i64,
+    /// # }
+    /// # use toasty::stmt::Insert;
+    /// let insert = Insert::<Session>::blank_single().ttl(3_600);
+    /// # let _ = insert;
+    /// ```
+    pub fn ttl(mut self, seconds: i64) -> Self {
+        self.untyped.ttl = Some(seconds);
+        self
     }
 
     /// Set the value of the field at `field` index in the current record.

@@ -71,6 +71,7 @@ fn mutation_query_pk_binds_key_and_row_filters_to_their_dependencies() -> Result
         .into(),
         condition: stmt::Condition::default(),
         returning: None,
+        ttl: None,
     };
     // Assignments already use data-loading positions at this boundary.
     update.assignments.set(3, stmt::Expr::arg(2));

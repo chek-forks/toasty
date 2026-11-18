@@ -114,6 +114,7 @@ fn update_with(assignments: Assignments) -> stmt::Statement {
         filter: Filter::ALL,
         condition: stmt::Condition::default(),
         returning: None,
+        ttl: None,
     }
     .into()
 }
@@ -150,6 +151,7 @@ fn upsert_with(assignments: Assignments) -> stmt::Statement {
             action: stmt::UpsertAction::Update,
         })),
         returning: None,
+        ttl: None,
     }
     .into()
 }

@@ -128,6 +128,17 @@ impl<T> Update<T> {
         self
     }
 
+    /// Set a per-write time-to-live in seconds (CQL `USING TTL`).
+    ///
+    /// Only backends with
+    /// [`Capability::native_ttl`](toasty_core::driver::Capability::native_ttl)
+    /// accept a TTL; every other backend rejects the statement with
+    /// [`unsupported_feature`](toasty_core::Error::unsupported_feature).
+    pub fn ttl(mut self, seconds: i64) -> Self {
+        self.untyped.ttl = Some(seconds);
+        self
+    }
+
     /// Assign a value to a field.
     ///
     /// `field` identifies which field to update and `expr` is the new value.
@@ -217,6 +228,7 @@ impl<M: Model> Default for Update<M> {
                 filter: stmt::Filter::new(stmt::Expr::from(false)),
                 condition: stmt::Condition::default(),
                 returning: Some(stmt::Returning::Changed),
+                ttl: None,
             },
             _p: PhantomData,
         }

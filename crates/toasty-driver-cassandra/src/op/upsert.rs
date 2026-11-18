@@ -7,7 +7,7 @@ use toasty_core::{
 
 use crate::{
     Connection, cql,
-    op::{apply_assignments_with_incoming, apply_defaults, project, returning_columns},
+    op::{apply_assignments_with_incoming, apply_defaults, project, returning_columns, ttl_bind},
     schema, value,
 };
 
@@ -18,6 +18,7 @@ impl Connection {
         op: operation::Upsert,
     ) -> Result<ExecResponse> {
         let insert = op.stmt;
+        let ttl = insert.ttl;
         let target = insert.target.as_table_unwrap();
         let table = schema.table(target.table);
         let upsert = insert
@@ -62,7 +63,7 @@ impl Connection {
 
         match upsert.action {
             UpsertAction::Ignore => {
-                let applied = self.insert_if_not_exists(table, &base).await?;
+                let applied = self.insert_if_not_exists(table, &base, ttl).await?;
 
                 if !applied {
                     return Ok(ExecResponse::empty_value_stream());
@@ -101,6 +102,7 @@ impl Connection {
                                 &columns,
                                 None,
                                 true,
+                                ttl,
                             )
                             .await?
                         {
@@ -122,7 +124,7 @@ impl Connection {
                     let created =
                         apply_assignments_with_incoming(&created, &upsert.create, table, &base)?;
 
-                    if self.insert_if_not_exists(table, &created).await? {
+                    if self.insert_if_not_exists(table, &created, ttl).await? {
                         return Ok(match &returning {
                             Some(columns) => {
                                 cql::stream(vec![Value::Record(project(&created, columns))])
@@ -143,6 +145,7 @@ impl Connection {
         &mut self,
         table: &db::Table,
         record: &ValueRecord,
+        ttl: Option<i64>,
     ) -> Result<bool> {
         // Include every non-null column so values added by `#[default]` /
         // `on_create` assignments are written too. Primary-key columns are
@@ -162,7 +165,9 @@ impl Connection {
         let names = cql::column_list(&columns);
         let placeholders = vec!["?"; columns.len()].join(", ");
 
-        let mut binds = Vec::with_capacity(columns.len());
+        let ttl_bind = ttl_bind(ttl)?;
+
+        let mut binds = Vec::with_capacity(columns.len() + usize::from(ttl_bind.is_some()));
         for column in &columns {
             binds.push(value::encode_for_column(
                 column,
@@ -170,9 +175,16 @@ impl Connection {
             )?);
         }
 
-        let cql = format!(
-            "INSERT INTO {} ({names}) VALUES ({placeholders}) IF NOT EXISTS",
-            schema::qualified(&self.config, &table.name)
+        if let Some(bind) = ttl_bind {
+            binds.push(Some(bind));
+        }
+
+        let cql = super::insert::insert_cql(
+            &schema::qualified(&self.config, &table.name),
+            &names,
+            &placeholders,
+            true,
+            ttl.is_some(),
         );
 
         self.execute_lwt(&cql, &binds).await

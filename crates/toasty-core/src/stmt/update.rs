@@ -42,6 +42,13 @@ pub struct Update {
 
     /// Optional `RETURNING` clause.
     pub returning: Option<Returning>,
+
+    /// Per-write time-to-live in seconds (CQL `USING TTL`).
+    ///
+    /// `None` leaves the stored TTL unchanged. Only backends whose
+    /// [`Capability::native_ttl`](crate::driver::Capability::native_ttl) is
+    /// `true` accept a value; the verifier rejects it everywhere else.
+    pub ttl: Option<i64>,
 }
 
 impl Statement {

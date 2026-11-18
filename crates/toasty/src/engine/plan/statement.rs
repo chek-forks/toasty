@@ -1943,6 +1943,7 @@ impl<'a, 'b> PlanStatement<'a, 'b> {
                     assignments: update_stmt.assignments.clone(),
                     filter,
                     condition,
+                    ttl: update_stmt.ttl,
                     columns: self.load_data.select_items.extract_expr_references(),
                     ty: ty.clone(),
                 })

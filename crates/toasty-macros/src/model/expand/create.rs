@@ -35,6 +35,14 @@ impl Expand<'_> {
             impl #create_struct_ident {
                 #create_methods
 
+                /// Set a per-write time-to-live in seconds (CQL `USING TTL`).
+                ///
+                /// Only backends with `Capability::native_ttl` accept a TTL.
+                #vis fn ttl(mut self, seconds: i64) -> Self {
+                    self.stmt = self.stmt.ttl(seconds);
+                    self
+                }
+
                 #vis async fn exec(self, executor: &mut dyn #toasty::Executor) -> #toasty::Result<#model_ident> {
                     executor.exec(self.stmt.into()).await
                 }

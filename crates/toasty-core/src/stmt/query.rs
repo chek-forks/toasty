@@ -154,6 +154,7 @@ impl Query {
             filter: Filter::default(),
             condition: stmt::Condition::default(),
             returning: None,
+            ttl: None,
         }
     }
 

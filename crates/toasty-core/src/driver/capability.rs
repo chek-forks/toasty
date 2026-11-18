@@ -247,6 +247,15 @@ pub struct Capability {
     /// Implies `native_like`.
     pub native_ilike: bool,
 
+    /// Whether the database supports a per-write time-to-live clause
+    /// (CQL's `USING TTL`).
+    ///
+    /// Only Cassandra has one. When `false`, the engine rejects a statement
+    /// carrying a TTL with
+    /// [`unsupported_feature`](crate::Error::unsupported_feature) rather than
+    /// silently writing the row without an expiry.
+    pub native_ttl: bool,
+
     /// Whether the driver can answer queries that don't match any primary key
     /// or index — i.e. supports unindexed full-table reads.
     ///
@@ -723,6 +732,9 @@ impl Capability {
         // `ILIKE` operator, so `.ilike()` is rejected here.
         native_ilike: false,
 
+        // SQL has no per-write TTL clause.
+        native_ttl: false,
+
         // SQL drivers handle unindexed queries via QuerySql (see field doc).
         scan: true,
         scan_supports_sort: true,
@@ -787,6 +799,9 @@ impl Capability {
 
         // PostgreSQL is the only backend with a native `ILIKE` operator.
         native_ilike: true,
+
+        // PostgreSQL has no per-write TTL clause.
+        native_ttl: false,
 
         // PostgreSQL has CREATE TYPE ... AS ENUM
         native_enum: true,
@@ -987,6 +1002,10 @@ impl Capability {
         native_like: false,
         native_ilike: false,
 
+        // DynamoDB TTL is configured per table and applied asynchronously, not
+        // per write.
+        native_ttl: false,
+
         scan: true,
         scan_supports_sort: false,
 
@@ -1100,6 +1119,9 @@ impl Capability {
         binary_like_starts_with: false,
         native_like: true,
         native_ilike: false,
+
+        // CQL writes accept `USING TTL <seconds>`.
+        native_ttl: true,
 
         // Unindexed queries use `SELECT ... ALLOW FILTERING`.
         scan: true,

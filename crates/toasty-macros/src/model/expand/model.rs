@@ -91,6 +91,7 @@ impl Expand<'_> {
                     let mut s = #update_struct_ident {
                         assignments: #toasty::core::stmt::Assignments::default(),
                         condition: None,
+                        ttl: None,
                         target: self,
                     };
                     s.apply_update_defaults();

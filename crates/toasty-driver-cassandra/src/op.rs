@@ -9,6 +9,7 @@ mod upsert;
 
 pub(crate) use query_pk::apply_pagination;
 
+use scylla::value::CqlValue;
 use toasty_core::{
     Error, Result,
     schema::db::{self, Column, Table},
@@ -16,6 +17,22 @@ use toasty_core::{
 };
 
 use crate::{Connection, cql, expr, schema, value};
+
+/// Encodes a per-write TTL (seconds) as the CQL `int` bind its `USING TTL ?`
+/// clause expects.
+pub(crate) fn ttl_bind(ttl: Option<i64>) -> Result<Option<CqlValue>> {
+    match ttl {
+        Some(ttl) => {
+            let ttl = i32::try_from(ttl).map_err(|_| {
+                Error::invalid_statement(format!(
+                    "CQL time-to-live {ttl} seconds does not fit in a 32-bit integer"
+                ))
+            })?;
+            Ok(Some(CqlValue::Int(ttl)))
+        }
+        None => Ok(None),
+    }
+}
 
 impl Connection {
     /// Reads one row by its full primary key, selecting every column.
@@ -49,35 +66,19 @@ impl Connection {
         columns: &[&Column],
         condition: Option<&stmt::Expr>,
         if_exists: bool,
+        ttl: Option<i64>,
     ) -> Result<bool> {
-        let mut sets = Vec::with_capacity(columns.len());
-        let mut binds = Vec::with_capacity(columns.len() + table.primary_key.columns.len());
-
-        for column in columns {
-            if table
-                .primary_key
-                .columns
-                .iter()
-                .any(|pk| pk.index == column.id.index)
-            {
-                continue;
-            }
-            sets.push(format!("{} = ?", cql::quote(&column.name)));
-            binds.push(value::encode_for_column(
-                column,
-                &record.fields[column.id.index],
-            )?);
-        }
+        let (sets, mut binds) = write_row_assignments(table, record, columns, ttl)?;
 
         if sets.is_empty() {
             return Ok(true);
         }
 
-        let mut cql = format!(
-            "UPDATE {} SET {} WHERE {}",
-            schema::qualified(&self.config, &table.name),
-            sets.join(", "),
-            cql::pk_where(table)
+        let mut cql = update_cql(
+            &schema::qualified(&self.config, &table.name),
+            &sets.join(", "),
+            &cql::pk_where(table),
+            ttl.is_some(),
         );
         binds.extend(value::key_binds(table, key)?);
 
@@ -106,6 +107,51 @@ impl Connection {
         self.query_all(&cql, &binds).await?;
         Ok(true)
     }
+}
+
+/// Builds the `SET` list and its binds for a full-row update.
+///
+/// The TTL bind, when present, comes first because `USING TTL ?` precedes
+/// `SET`; getting this order wrong binds the TTL to the wrong column.
+pub(crate) fn write_row_assignments(
+    table: &Table,
+    record: &ValueRecord,
+    columns: &[&Column],
+    ttl: Option<i64>,
+) -> Result<(Vec<String>, Vec<Option<CqlValue>>)> {
+    let mut sets = Vec::with_capacity(columns.len());
+    let mut binds = Vec::with_capacity(columns.len() + 1);
+
+    if let Some(bind) = ttl_bind(ttl)? {
+        binds.push(Some(bind));
+    }
+
+    for column in columns {
+        if table
+            .primary_key
+            .columns
+            .iter()
+            .any(|pk| pk.index == column.id.index)
+        {
+            continue;
+        }
+        sets.push(format!("{} = ?", cql::quote(&column.name)));
+        binds.push(value::encode_for_column(
+            column,
+            &record.fields[column.id.index],
+        )?);
+    }
+
+    Ok((sets, binds))
+}
+
+/// Renders an `UPDATE` statement. `has_ttl` adds the `USING TTL ?` clause
+/// between the table name and `SET`.
+pub(crate) fn update_cql(qualified: &str, sets: &str, where_clause: &str, has_ttl: bool) -> String {
+    format!(
+        "UPDATE {qualified}{} SET {sets} WHERE {where_clause}",
+        if has_ttl { " USING TTL ?" } else { "" }
+    )
 }
 
 /// Applies an assignment list to a row, substituting `Expr::Incoming`
@@ -458,5 +504,89 @@ pub(crate) fn next_cursor(state: scylla::response::PagingStateResponse) -> Optio
         std::ops::ControlFlow::Continue(state) => state
             .as_bytes_slice()
             .map(|bytes| Box::new(Value::Bytes(bytes.to_vec()))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use toasty_core::{
+        schema::db::{ColumnId, IndexId, PrimaryKey, TableId},
+        stmt::Type,
+    };
+
+    fn column(index: usize, name: &str, primary_key: bool) -> Column {
+        Column {
+            id: ColumnId {
+                table: TableId(0),
+                index,
+            },
+            name: name.to_owned(),
+            ty: Type::I64,
+            storage_ty: db::Type::Integer(8),
+            nullable: false,
+            primary_key,
+            auto_increment: false,
+            versionable: false,
+        }
+    }
+
+    fn table() -> Table {
+        Table {
+            id: TableId(0),
+            name: "things".to_owned(),
+            columns: vec![column(0, "id", true), column(1, "value", false)],
+            primary_key: PrimaryKey {
+                columns: vec![ColumnId {
+                    table: TableId(0),
+                    index: 0,
+                }],
+                index: IndexId {
+                    table: TableId(0),
+                    index: 0,
+                },
+            },
+            indices: vec![],
+        }
+    }
+
+    #[test]
+    fn ttl_bind_encodes_seconds_as_cql_int() {
+        assert_eq!(ttl_bind(None).unwrap(), None);
+        assert_eq!(ttl_bind(Some(3_600)).unwrap(), Some(CqlValue::Int(3_600)));
+    }
+
+    #[test]
+    fn ttl_bind_rejects_out_of_range() {
+        assert!(ttl_bind(Some(i64::from(i32::MAX) + 1)).is_err());
+    }
+
+    #[test]
+    fn update_cql_places_ttl_between_table_and_set() {
+        assert_eq!(
+            update_cql("ks.things", "\"value\" = ?", "\"id\" = ?", true),
+            "UPDATE ks.things USING TTL ? SET \"value\" = ? WHERE \"id\" = ?"
+        );
+        assert_eq!(
+            update_cql("ks.things", "\"value\" = ?", "\"id\" = ?", false),
+            "UPDATE ks.things SET \"value\" = ? WHERE \"id\" = ?"
+        );
+    }
+
+    #[test]
+    fn write_row_assignments_binds_ttl_first() {
+        let table = table();
+        let columns: Vec<&Column> = table.columns.iter().collect();
+        let record = ValueRecord::from_vec(vec![Value::I64(1), Value::I64(7)]);
+
+        let (sets, binds) = write_row_assignments(&table, &record, &columns, Some(60)).unwrap();
+        assert_eq!(sets, vec!["\"value\" = ?".to_owned()]);
+        assert_eq!(
+            binds,
+            vec![Some(CqlValue::Int(60)), Some(CqlValue::BigInt(7))]
+        );
+
+        let (_, binds) = write_row_assignments(&table, &record, &columns, None).unwrap();
+        assert_eq!(binds, vec![Some(CqlValue::BigInt(7))]);
     }
 }

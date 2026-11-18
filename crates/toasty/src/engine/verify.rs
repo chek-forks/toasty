@@ -58,6 +58,13 @@ impl stmt::Visit for Verify<'_, '_> {
     fn visit_stmt_insert(&mut self, i: &stmt::Insert) {
         stmt::visit::visit_stmt_insert(self, i);
 
+        if i.ttl.is_some() && !self.capability.native_ttl {
+            self.record(Error::unsupported_feature(format!(
+                "{} does not support a per-write time-to-live",
+                self.capability.driver_name
+            )));
+        }
+
         let Some(upsert) = &i.upsert else {
             return;
         };
@@ -272,6 +279,13 @@ impl stmt::Visit for Verify<'_, '_> {
 
     fn visit_stmt_update(&mut self, i: &stmt::Update) {
         stmt::visit::visit_stmt_update(self, i);
+
+        if i.ttl.is_some() && !self.capability.native_ttl {
+            self.record(Error::unsupported_feature(format!(
+                "{} does not support a per-write time-to-live",
+                self.capability.driver_name
+            )));
+        }
 
         // A rejected assignment may be the only one requested, so there is
         // nothing further to check.
@@ -807,6 +821,7 @@ mod tests {
             filter: stmt::Filter::new(stmt::Expr::from(true)),
             condition: stmt::Condition::default(),
             returning: None,
+            ttl: None,
         };
 
         let err = verify_with(&Capability::SQLITE, Statement::Update(update))

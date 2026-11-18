@@ -32,6 +32,7 @@ fn extract_scalar_from_simple_insert() {
         ))])),
         upsert: None,
         returning: None,
+        ttl: None,
     });
 
     let params = run(
@@ -75,6 +76,7 @@ fn null_values_not_extracted() {
         ))])),
         upsert: None,
         returning: None,
+        ttl: None,
     });
 
     let params = run(
@@ -146,6 +148,7 @@ fn enum_insert_refines_type_to_enum() {
         ))])),
         upsert: None,
         returning: None,
+        ttl: None,
     });
 
     let params = run(
@@ -182,6 +185,7 @@ fn non_enum_insert_keeps_default_types() {
         ))])),
         upsert: None,
         returning: None,
+        ttl: None,
     });
 
     let params = run(
@@ -474,6 +478,7 @@ fn static_value_in_insert_row_is_not_extracted() {
         })])),
         upsert: None,
         returning: None,
+        ttl: None,
     });
 
     let params = run(

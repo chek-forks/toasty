@@ -258,6 +258,12 @@ impl Expand<'_> {
                     #ignore_ident { stmt: self.stmt }
                 }
 
+                #[doc = "Sets a per-write time-to-live in seconds (CQL `USING TTL`).\n\nApplies to both branches: the insert and, when the row already exists, the update."]
+                #vis fn ttl(mut self, seconds: i64) -> Self {
+                    self.stmt = self.stmt.ttl(seconds);
+                    self
+                }
+
                 #[doc = "Executes the upsert and returns the record stored by the database."]
                 #vis async fn exec(self, executor: &mut dyn #toasty::Executor) -> #toasty::Result<#model_ident> {
                     executor.exec(self.stmt.into()).await
@@ -301,6 +307,12 @@ impl Expand<'_> {
             }
 
             impl #ignore_ident {
+                #[doc = "Sets a per-write time-to-live in seconds (CQL `USING TTL`)."]
+                #vis fn ttl(mut self, seconds: i64) -> Self {
+                    self.stmt = self.stmt.ttl(seconds);
+                    self
+                }
+
                 #[doc = "Executes the insert-or-ignore operation.\n\nReturns `Some(model)` when the record is inserted and `None` when the selected target conflicts."]
                 #vis async fn exec(self, executor: &mut dyn #toasty::Executor) -> #toasty::Result<Option<#model_ident>> {
                     let stmt = #toasty::Statement::<Option<#model_ident>>::from_untyped_stmt(

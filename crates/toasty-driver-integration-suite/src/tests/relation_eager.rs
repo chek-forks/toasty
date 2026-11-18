@@ -759,6 +759,7 @@ async fn insert_row<M: Model>(db: &mut toasty::Db, fields: Vec<stmt::Expr>) -> R
         source: stmt::Query::new_single(vec![stmt::Expr::record(fields)]),
         upsert: None,
         returning: None,
+        ttl: None,
     };
 
     toasty::Statement::<()>::from_untyped_stmt(insert.into())

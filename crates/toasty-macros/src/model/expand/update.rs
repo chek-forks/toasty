@@ -162,6 +162,7 @@ impl Expand<'_> {
             #vis struct #update_struct_ident<#target_ty: #toasty::UpdateTarget = #query_struct_ident> {
                 assignments: #toasty::core::stmt::Assignments,
                 condition: Option<#toasty::core::stmt::Expr>,
+                ttl: Option<i64>,
                 target: #target_ty,
             }
 
@@ -204,6 +205,14 @@ impl Expand<'_> {
                     self
                 }
 
+                /// Set a per-write time-to-live in seconds (CQL `USING TTL`).
+                ///
+                /// Only backends with `Capability::native_ttl` accept a TTL.
+                #vis fn ttl(mut self, seconds: i64) -> Self {
+                    self.ttl = Some(seconds);
+                    self
+                }
+
                 fn build_stmt(&mut self) -> #toasty::core::stmt::Statement {
                     use #toasty::UpdateTarget as _;
                     let assignments = ::std::mem::take(&mut self.assignments);
@@ -211,6 +220,7 @@ impl Expand<'_> {
                     if let Some(cond) = self.condition.take() {
                         stmt.as_untyped_mut().condition = #toasty::core::stmt::Condition::new(cond);
                     }
+                    stmt.as_untyped_mut().ttl = self.ttl;
                     stmt.into_untyped()
                 }
 
@@ -271,6 +281,7 @@ impl Expand<'_> {
                     let mut s = #update_struct_ident {
                         assignments: #toasty::core::stmt::Assignments::default(),
                         condition: None,
+                        ttl: None,
                         target: value,
                     };
                     s.apply_update_defaults();
@@ -283,6 +294,7 @@ impl Expand<'_> {
                     let mut s = #update_struct_ident {
                         assignments: #toasty::core::stmt::Assignments::default(),
                         condition: None,
+                        ttl: None,
                         target: #query_struct_ident::from_stmt(src),
                     };
                     s.apply_update_defaults();

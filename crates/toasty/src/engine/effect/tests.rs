@@ -20,6 +20,7 @@ fn simple_insert() -> Insert {
         source: Query::unit(),
         upsert: None,
         returning: None,
+        ttl: None,
     }
 }
 
@@ -30,6 +31,7 @@ fn simple_update() -> Update {
         filter: Filter::default(),
         condition: Condition::default(),
         returning: None,
+        ttl: None,
     }
 }
 
@@ -198,6 +200,7 @@ fn lowered_update_to_table_is_mutating() {
         filter: Filter::default(),
         condition: Condition::default(),
         returning: None,
+        ttl: None,
     });
     assert_eq!(classify(&stmt), Effect::Mutating);
 }

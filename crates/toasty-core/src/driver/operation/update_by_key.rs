@@ -46,6 +46,9 @@ pub struct UpdateByKey {
     /// than silently skipping the row.
     pub condition: Option<stmt::Expr>,
 
+    /// Per-write time-to-live in seconds, when the backend supports one.
+    pub ttl: Option<i64>,
+
     /// The columns to return for each updated row.
     ///
     /// `None` returns the affected-row count. `Some(columns)` returns one

@@ -28,6 +28,9 @@ pub(crate) struct UpdateByKey {
     /// Optional condition for optimistic locking.
     pub(crate) condition: Option<stmt::Expr>,
 
+    /// Per-write time-to-live in seconds, when the backend supports one.
+    pub(crate) ttl: Option<i64>,
+
     /// The columns to return for each updated row. Empty when the update
     /// returns only an affected-row count (the type is then `Unit`).
     pub(crate) columns: IndexSet<stmt::ExprReference>,

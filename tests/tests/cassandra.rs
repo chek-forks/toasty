@@ -61,6 +61,7 @@ toasty_driver_integration_suite::generate_driver_tests!(
     native_json: false,
     native_jsonb: false,
     native_ilike: false,
+    native_ttl: true,
     native_timestamp: false,
     native_date: false,
     native_time: false,

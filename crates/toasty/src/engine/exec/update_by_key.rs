@@ -69,6 +69,7 @@ impl Exec<'_> {
             assignments: action.assignments.clone(),
             filter: action.filter.clone(),
             condition: action.condition.clone(),
+            ttl: action.ttl,
             returning: returning.clone(),
         };
 

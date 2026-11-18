@@ -37,6 +37,13 @@ pub struct Insert {
 
     /// Optional `RETURNING` clause to return data from the insertion.
     pub returning: Option<Returning>,
+
+    /// Per-write time-to-live in seconds (CQL `USING TTL`).
+    ///
+    /// `None` stores the row with the table's default expiry. Only backends
+    /// whose [`Capability::native_ttl`](crate::driver::Capability::native_ttl)
+    /// is `true` accept a value; the verifier rejects it everywhere else.
+    pub ttl: Option<i64>,
 }
 
 /// Conflict handling attached to an [`Insert`].
@@ -124,6 +131,11 @@ impl Insert {
     /// Both inserts must target the same model, and both sources must be
     /// `VALUES` expressions.
     pub fn merge(&mut self, other: Self) {
+        assert_eq!(
+            self.ttl, other.ttl,
+            "cannot merge inserts with different time-to-live values"
+        );
+
         match (&self.target, &other.target) {
             (InsertTarget::Model(a), InsertTarget::Model(b)) if a == b => {}
             _ => todo!("handle this case"),

@@ -176,6 +176,7 @@ fn values_inside_insert_no_row_wrapper_on_mysql() {
         source: stmt::Query::values(values),
         upsert: None,
         returning: None,
+        ttl: None,
     }
     .into();
 

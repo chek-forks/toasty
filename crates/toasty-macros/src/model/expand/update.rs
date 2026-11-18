@@ -182,6 +182,28 @@ impl Expand<'_> {
 
                 #builder_methods
 
+                /// Attach a guard condition to this update.
+                ///
+                /// The condition is evaluated after the target selection and
+                /// decides whether the write is applied. When it does not
+                /// hold, execution fails with a condition-failed error instead
+                /// of silently updating nothing.
+                ///
+                /// A model with a `#[version]` field already conditions its
+                /// instance updates on the version. This method combines the
+                /// caller condition with that guard using `AND`.
+                #vis fn set_condition(
+                    mut self,
+                    condition: impl Into<#toasty::core::stmt::Expr>,
+                ) -> Self {
+                    let condition = condition.into();
+                    self.condition = Some(match self.condition.take() {
+                        Some(existing) => #toasty::core::stmt::Expr::and(existing, condition),
+                        None => condition,
+                    });
+                    self
+                }
+
                 fn build_stmt(&mut self) -> #toasty::core::stmt::Statement {
                     use #toasty::UpdateTarget as _;
                     let assignments = ::std::mem::take(&mut self.assignments);

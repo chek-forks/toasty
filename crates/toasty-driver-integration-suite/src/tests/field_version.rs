@@ -514,3 +514,124 @@ pub async fn stale_delete_fails(test: &mut Test) -> Result<()> {
 
     Ok(())
 }
+
+/// A caller-supplied condition gates an instance update on a plain column.
+/// This is the revision-based optimistic-concurrency pattern used by tables
+/// that do not model the counter as a `#[version]` field.
+#[driver_test(scenario(crate::scenarios::plain_revision))]
+pub async fn caller_condition_gates_instance_update(test: &mut Test) -> Result<()> {
+    let mut db = setup(test).await;
+
+    let mut doc = toasty::create!(Document {
+        body: "v1",
+        revision: 1,
+    })
+    .exec(&mut db)
+    .await?;
+
+    doc.update()
+        .body("v2")
+        .revision(2)
+        .set_condition(Document::fields().revision().eq(1))
+        .exec(&mut db)
+        .await?;
+    assert_struct!(doc, { body: "v2", revision: 2 });
+
+    // The caller condition is stale even though the instance is current.
+    let result: Result<()> = doc
+        .update()
+        .body("v3")
+        .revision(3)
+        .set_condition(Document::fields().revision().eq(1))
+        .exec(&mut db)
+        .await;
+    let err = assert_err!(result);
+    assert!(
+        err.is_condition_failed(),
+        "expected condition_failed, got {err:?}"
+    );
+
+    let reloaded = Document::filter_by_id(doc.id).get(&mut db).await?;
+    assert_struct!(reloaded, { body: "v2", revision: 2 });
+
+    Ok(())
+}
+
+/// The query-based counterpart: a caller condition on the key-addressed update
+/// path applies only when the stored revision matches.
+#[driver_test(scenario(crate::scenarios::plain_revision))]
+pub async fn caller_condition_gates_query_update(test: &mut Test) -> Result<()> {
+    let mut db = setup(test).await;
+
+    let doc = toasty::create!(Document {
+        body: "v1",
+        revision: 1,
+    })
+    .exec(&mut db)
+    .await?;
+
+    Document::filter_by_id(doc.id)
+        .update()
+        .body("v2")
+        .revision(2)
+        .set_condition(Document::fields().revision().eq(1))
+        .exec(&mut db)
+        .await?;
+
+    let result: Result<()> = Document::filter_by_id(doc.id)
+        .update()
+        .body("v3")
+        .revision(3)
+        .set_condition(Document::fields().revision().eq(1))
+        .exec(&mut db)
+        .await;
+    let err = assert_err!(result);
+    assert!(
+        err.is_condition_failed(),
+        "expected condition_failed, got {err:?}"
+    );
+
+    let reloaded = Document::filter_by_id(doc.id).get(&mut db).await?;
+    assert_struct!(reloaded, { body: "v2", revision: 2 });
+
+    Ok(())
+}
+
+/// A caller condition combines with the `#[version]` OCC guard using `AND`.
+///
+/// The caller condition holds here, but the version guard is stale. If
+/// `set_condition` replaced the version guard, this update would incorrectly
+/// succeed.
+#[driver_test(scenario(crate::scenarios::versioned_item))]
+pub async fn caller_condition_combines_with_version_guard(test: &mut Test) -> Result<()> {
+    let mut db = setup(test).await;
+
+    let mut item = toasty::create!(Item { name: "hello" })
+        .exec(&mut db)
+        .await?;
+    let mut stale = Item::filter_by_id(item.id).get(&mut db).await?;
+    assert_eq!(stale.version, 1);
+
+    // Advance the stored row to version 2.
+    item.update().name("first").exec(&mut db).await?;
+    assert_struct!(item, { name: "first", version: 2 });
+
+    // The caller condition (`name == "first"`) holds, but the stale handle's
+    // version guard does not.
+    let result: Result<()> = stale
+        .update()
+        .name("second")
+        .set_condition(Item::fields().name().eq("first"))
+        .exec(&mut db)
+        .await;
+    let err = assert_err!(result);
+    assert!(
+        err.is_condition_failed(),
+        "expected condition_failed, got {err:?}"
+    );
+
+    let reloaded = Item::filter_by_id(item.id).get(&mut db).await?;
+    assert_struct!(reloaded, { name: "first", version: 2 });
+
+    Ok(())
+}

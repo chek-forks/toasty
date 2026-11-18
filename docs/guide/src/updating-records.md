@@ -379,6 +379,43 @@ instance updates condition the write on the version the instance
 was loaded with and increment it atomically. If a concurrent writer
 has modified the record, `.exec()` returns an error.
 
+### Caller-supplied conditions
+
+For tables that keep their own revision column — for example a counter that
+advances by more than one, or a row that also transitions through a state
+machine — attach a condition to the update with `set_condition`:
+
+```rust
+# use toasty::Model;
+# #[derive(Debug, toasty::Model)]
+# struct Mailbox {
+#     #[key]
+#     id: i64,
+#     state: String,
+#     revision: i64,
+# }
+# async fn __example(mut db: toasty::Db) -> toasty::Result<()> {
+# let mut mailbox = toasty::create!(Mailbox { state: "active", revision: 1 })
+#     .exec(&mut db).await?;
+let expected = mailbox.revision;
+
+mailbox
+    .update()
+    .state("suspended")
+    .revision(expected + 1)
+    .set_condition(Mailbox::fields().revision().eq(expected))
+    .exec(&mut db)
+    .await?;
+# Ok(())
+# }
+```
+
+The condition is evaluated after the target selection. If it does not hold,
+the write is not applied and `.exec()` returns a condition-failed error. On a
+model that also has a `#[version]` field, `set_condition` combines the caller
+condition with the version guard using `AND`; the version guard is never
+dropped.
+
 ## Building updates programmatically
 
 The macro lists every field at the macro call site. To set fields

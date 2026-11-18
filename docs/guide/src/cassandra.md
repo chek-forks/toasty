@@ -114,6 +114,11 @@ which would silently truncate Toasty's nanosecond values.
   remove-by-value.
 - `#[version]` optimistic concurrency through CQL lightweight transactions
   (`UPDATE … IF version = ?`).
+- Caller-supplied update and delete conditions (`UPDATE … IF …`,
+  `DELETE … IF …`) through `set_condition`, also compiled to lightweight
+  transactions. Conditions support the same equality and range predicates as
+  filters; conditions the driver cannot render are rejected with
+  `unsupported_feature` rather than being evaluated client-side.
 - Upserts by primary key: `INSERT … IF NOT EXISTS` for ignore, and a
   read-then-write update for the update branch.
 
@@ -140,8 +145,8 @@ which would silently truncate Toasty's nanosecond values.
 - **Secondary-index `ORDER BY` is not supported.** Ordering is available on
   clustering columns of a single partition.
 - **Updates and deletes with a non-key filter** are executed as read, filter,
-  write. This is not atomic with concurrent writers; use `#[version]` when that
-  matters.
+  write. This is not atomic with concurrent writers. Use `#[version]` or
+  `set_condition` on a full-primary-key update when that matters.
 - **No positional list operations.** `pop()` and remove-at are rejected;
   remove-by-value is supported.
 - **Schema changes are limited.** Cassandra can add and drop columns but cannot

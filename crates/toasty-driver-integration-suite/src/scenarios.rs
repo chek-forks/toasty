@@ -25,6 +25,7 @@ pub mod has_many_unique_title;
 pub mod has_one_optional_belongs_to;
 pub mod in_list_item;
 pub mod person_contact_deferred_metadata;
+pub mod plain_revision;
 pub mod tagged_item;
 pub mod task_bug_priority;
 pub mod task_name_status;

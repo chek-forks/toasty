@@ -79,6 +79,42 @@ Only instance updates and instance deletes *check* the version and fail on
 conflict. Query-based updates increment the version but apply unconditionally —
 they never fail on a version mismatch.
 
+## Caller-supplied conditions
+
+`#[version]` is tied to one version column and always advances it by one. When
+the counter lives in an ordinary column — it advances by more than one, or the
+write also depends on another field — attach the condition yourself:
+
+```rust
+# use toasty::Model;
+# #[derive(Debug, toasty::Model)]
+# struct Mailbox {
+#     #[key]
+#     id: i64,
+#     state: String,
+#     revision: i64,
+# }
+# async fn __example(mut db: toasty::Db) -> toasty::Result<()> {
+# let mut mailbox = toasty::create!(Mailbox { state: "active", revision: 1 })
+#     .exec(&mut db).await?;
+let expected = mailbox.revision;
+
+mailbox
+    .update()
+    .state("suspended")
+    .revision(expected + 1)
+    .set_condition(Mailbox::fields().revision().eq(expected))
+    .exec(&mut db)
+    .await?;
+# Ok(())
+# }
+```
+
+`set_condition` accepts any boolean expression. It is combined with the
+`#[version]` guard using `AND` when the model has one, so the automatic OCC
+check is never dropped. A failed condition returns `Error::condition_failed`,
+the same as a version conflict.
+
 ## Driver support
 
 `#[version]` works on every driver: DynamoDB, SQLite, PostgreSQL, and MySQL. How

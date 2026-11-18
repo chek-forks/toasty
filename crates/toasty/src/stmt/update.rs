@@ -96,6 +96,38 @@ impl<T> Update<T> {
         self.untyped.assignments = assignments;
     }
 
+    /// Attach a guard condition to this update.
+    ///
+    /// Unlike the update's filter, a condition does not select which records
+    /// to update. It is evaluated after the selection and decides whether the
+    /// write is applied. A failed condition surfaces as an error, typically
+    /// [`condition_failed`](toasty_core::Error::condition_failed), instead of
+    /// silently updating nothing.
+    ///
+    /// A model with a `#[version]` field already conditions its instance
+    /// updates on the version. This method replaces the low-level condition;
+    /// the generated update builder's `set_condition` combines a caller
+    /// condition with the version guard using `AND`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug, toasty::Model)]
+    /// # struct User {
+    /// #     #[key]
+    /// #     id: i64,
+    /// #     name: String,
+    /// # }
+    /// use toasty::stmt::{Condition, List, Query, Update};
+    ///
+    /// let update = Update::<List<User>>::new(Query::<List<User>>::all())
+    ///     .set_condition(Condition::new(User::fields().id().eq(1)));
+    /// ```
+    pub fn set_condition(mut self, condition: stmt::Condition) -> Self {
+        self.untyped.condition = condition;
+        self
+    }
+
     /// Assign a value to a field.
     ///
     /// `field` identifies which field to update and `expr` is the new value.

@@ -114,6 +114,50 @@ fn on_transaction_cancelled(
     }
 }
 
+/// Builds the returning row for an update from the exact column list the engine
+/// requested.
+///
+/// Each column is seeded with the update's own bound value when it has one.
+/// Columns the update never assigns (the primary key and untouched fields)
+/// have no bound value: they start as null, and the caller fills them in from
+/// `UPDATED_NEW` on the single-statement path or with a follow-up `get_item`
+/// on the transaction path.
+///
+/// Returns the row, the columns the single-statement path refreshes from
+/// `UPDATED_NEW`, and the columns that only the read-back can supply.
+/// A seeded returning row: the row itself, the columns refreshed from
+/// `UPDATED_NEW`, and the columns only a read-back can supply.
+type ReturningSeed<'a> = (
+    Vec<stmt::Value>,
+    Vec<(usize, &'a db::Column)>,
+    Vec<(usize, &'a db::Column)>,
+);
+
+fn seed_returning_row<'a>(
+    table: &'a db::Table,
+    columns: &[toasty_core::schema::db::ColumnId],
+    bound_values: &HashMap<usize, &stmt::Value>,
+) -> ReturningSeed<'a> {
+    let mut row = vec![];
+    let mut refresh = vec![];
+    let mut read_back = vec![];
+
+    for column_id in columns {
+        let column = table.column(*column_id);
+        let placeholder = match bound_values.get(&column_id.index) {
+            Some(value) => (*value).clone(),
+            None => {
+                read_back.push((row.len(), column));
+                stmt::Value::Null
+            }
+        };
+        refresh.push((row.len(), column));
+        row.push(placeholder);
+    }
+
+    (row, refresh, read_back)
+}
+
 impl Connection {
     pub(crate) async fn exec_update_by_key(
         &mut self,
@@ -278,20 +322,10 @@ impl Connection {
         // the assignments. Each column is seeded with a placeholder, then
         // refreshed below from the `UPDATED_NEW` response with its post-update
         // value.
-        let mut ret = vec![];
-        let mut refresh_after_update: Vec<(usize, &db::Column)> = vec![];
-
-        if let Some(columns) = &op.returning {
-            for column_id in columns {
-                let column = schema.column(*column_id);
-                let placeholder = bound_values
-                    .get(&column_id.index)
-                    .map(|value| (*value).clone())
-                    .unwrap_or(stmt::Value::Null);
-                refresh_after_update.push((ret.len(), column));
-                ret.push(placeholder);
-            }
-        }
+        let (mut ret, refresh_after_update, read_back_after_transact) = match &op.returning {
+            Some(columns) => seed_returning_row(table, columns, &bound_values),
+            None => (vec![], vec![], vec![]),
+        };
 
         // The seeded placeholders are not the post-update column values.
         // Request `UPDATED_NEW` so the response carries the actual new
@@ -660,6 +694,29 @@ impl Connection {
                             SdkError::ServiceError(e),
                         ));
                     }
+
+                    // The transaction cannot return attribute values, so any
+                    // requested column the update did not assign is still a
+                    // placeholder. Read the committed row once and fill them in.
+                    if !read_back_after_transact.is_empty() {
+                        let output = self
+                            .client
+                            .get_item()
+                            .table_name(&table.name)
+                            .set_key(Some(ddb_key(table, key)))
+                            .consistent_read(true)
+                            .send()
+                            .await
+                            .map_err(toasty_core::Error::driver_operation_failed)?;
+
+                        if let Some(item) = output.item() {
+                            for (idx, column) in &read_back_after_transact {
+                                if let Some(attr) = item.get(&column.name) {
+                                    ret[*idx] = Value::from_ddb(&column.ty, attr).into_inner();
+                                }
+                            }
+                        }
+                    }
                 }
             }
             _ => todo!(),
@@ -677,7 +734,7 @@ impl Connection {
 
 #[cfg(test)]
 mod tests {
-    use super::filter_failed;
+    use super::{filter_failed, seed_returning_row};
     use crate::db;
     use aws_sdk_dynamodb::types::AttributeValue;
     use std::collections::HashMap;
@@ -765,5 +822,57 @@ mod tests {
         let filter = status_eq_active();
         let item = item_with_status("inactive");
         assert!(filter_failed(Some(&item), &table, Some(&filter)));
+    }
+
+    /// A returning row that names more columns than the update assigns must
+    /// mark the rest for read-back. The transaction path cannot request
+    /// `UPDATED_NEW`, so without this the primary key comes back null.
+    #[test]
+    fn seed_returning_row_marks_unassigned_columns_for_read_back() {
+        // `status` (column 0) is assigned, `id` (column 1) is the key.
+        let mut table = make_table();
+        table.columns.push(Column {
+            id: ColumnId {
+                table: TableId(0),
+                index: 1,
+            },
+            name: "id".to_string(),
+            ty: stmt::Type::U64,
+            storage_ty: Type::Text,
+            nullable: false,
+            primary_key: true,
+            auto_increment: false,
+            versionable: false,
+        });
+
+        let assigned = stmt::Value::String("bob".to_string());
+        let mut bound_values = HashMap::new();
+        bound_values.insert(0usize, &assigned);
+
+        let (row, refresh, read_back) = seed_returning_row(
+            &table,
+            &[
+                ColumnId {
+                    table: TableId(0),
+                    index: 0,
+                },
+                ColumnId {
+                    table: TableId(0),
+                    index: 1,
+                },
+            ],
+            &bound_values,
+        );
+
+        assert_eq!(row, vec![assigned, stmt::Value::Null]);
+        assert_eq!(
+            refresh.iter().map(|(idx, _)| *idx).collect::<Vec<_>>(),
+            vec![0, 1]
+        );
+        assert_eq!(
+            read_back.iter().map(|(idx, _)| *idx).collect::<Vec<_>>(),
+            vec![1],
+            "the unassigned primary key has to be read back after the transaction"
+        );
     }
 }

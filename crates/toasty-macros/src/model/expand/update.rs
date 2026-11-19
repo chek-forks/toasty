@@ -226,8 +226,12 @@ impl Expand<'_> {
 
                 #vis async fn exec(mut self, executor: &mut dyn #toasty::Executor) -> #toasty::Result<()> {
                     let response = executor.exec_untyped(self.build_stmt()).await?;
-                    let value = response.values.collect_as_value().await?;
-                    self.target.apply_result(value)?;
+                    // A builder with an explicit `returning = None` gets a count
+                    // back; there is nothing to reload in that case.
+                    if !response.values.is_count() {
+                        let value = response.values.collect_as_value().await?;
+                        self.target.apply_result(value)?;
+                    }
                     Ok(())
                 }
             }
@@ -241,7 +245,10 @@ impl Expand<'_> {
                     assignments: #toasty::core::stmt::Assignments,
                 ) -> #toasty::stmt::Update<#model_ident> {
                     use #toasty::IntoStatement;
-                    let mut stmt = #toasty::stmt::Update::new(
+                    // The instance path merges the changed fields back into
+                    // `self` with `Load::reload`, so it wants the sparse
+                    // `Returning::Changed` projection, not a full model.
+                    let mut stmt = #toasty::stmt::Update::new_changed(
                         (&**self).into_statement().into_query().unwrap()
                     );
                     stmt.set_assignments(assignments);
@@ -265,7 +272,10 @@ impl Expand<'_> {
                         &mut self.stmt,
                         #toasty::stmt::Query::all(),
                     );
-                    let mut stmt = #toasty::stmt::Update::new(query);
+                    // Relation assignments are spliced into the returning
+                    // clause during lowering, so the returning value must stay
+                    // set; `apply_result` discards it.
+                    let mut stmt = #toasty::stmt::Update::new_changed(query);
                     stmt.set_assignments(assignments);
                     stmt
                 }
@@ -354,13 +364,24 @@ impl Expand<'_> {
 
         quote! {
             fn reload(target: &mut Self, value: #toasty::core::stmt::Value) -> #toasty::Result<()> {
-                for (field, value) in value.into_sparse_record().into_iter() {
-                    match field {
-                        #reload_arms
-                        _ => todo!("handle unknown field id in reload after update"),
+                // Partial update: merge the named fields in place. A full
+                // record means the statement returned a whole model, so load
+                // it the normal way instead of panicking.
+                match value {
+                    #toasty::core::stmt::Value::SparseRecord(record) => {
+                        for (field, value) in record.into_iter() {
+                            match field {
+                                #reload_arms
+                                _ => todo!("handle unknown field id in reload after update"),
+                            }
+                        }
+                        Ok(())
+                    }
+                    value => {
+                        *target = <Self as #toasty::Load>::load(value)?;
+                        Ok(())
                     }
                 }
-                Ok(())
             }
         }
     }

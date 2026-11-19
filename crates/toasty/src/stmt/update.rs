@@ -28,8 +28,9 @@ pub struct Update<T> {
 impl<T> Update<T> {
     /// Create a new update statement from the given query selection.
     ///
-    /// All records matched by `selection` will be updated. By default the
-    /// update returns the changed records (`Returning::Changed`).
+    /// All records matched by `selection` will be updated. The update returns
+    /// the full updated records, which is what [`exec`](Update::exec) promises
+    /// through `T::Output`.
     ///
     /// # Examples
     ///
@@ -45,6 +46,27 @@ impl<T> Update<T> {
     /// let update = Update::<List<User>>::new(Query::<List<User>>::all());
     /// ```
     pub fn new(selection: Query<T>) -> Self {
+        let mut stmt = selection.untyped.update();
+        // `exec` is typed on `T::Output`, so the statement has to return a
+        // complete record. Returning only the assigned fields (the sparse
+        // `Returning::Changed` projection) omits primary-key columns, and a
+        // model cannot be loaded from an incomplete record.
+        stmt.returning = Some(stmt::Returning::Model { include: vec![] });
+
+        Self {
+            untyped: stmt,
+            _p: PhantomData,
+        }
+    }
+
+    /// Create an update that returns only the assigned fields as a
+    /// [`SparseRecord`](toasty_core::stmt::Value::SparseRecord).
+    ///
+    /// Used by generated update builders, which merge the changed fields into
+    /// an instance with [`Load::reload`](crate::Load::reload) instead of
+    /// loading a whole model from the response.
+    #[doc(hidden)]
+    pub fn new_changed(selection: Query<T>) -> Self {
         let mut stmt = selection.untyped.update();
         stmt.returning = Some(stmt::Returning::Changed);
 
@@ -227,7 +249,7 @@ impl<M: Model> Default for Update<M> {
                 assignments: stmt::Assignments::default(),
                 filter: stmt::Filter::new(stmt::Expr::from(false)),
                 condition: stmt::Condition::default(),
-                returning: Some(stmt::Returning::Changed),
+                returning: Some(stmt::Returning::Model { include: vec![] }),
                 ttl: None,
             },
             _p: PhantomData,
